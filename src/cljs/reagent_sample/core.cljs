@@ -12,9 +12,12 @@
               [clojure.string :as string]
               [goog.history.EventType :as EventType]
               [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
-              [cljs.core.async :refer [chan <! put!]]
+              [cljs.core.async :refer [chan <! put! pipe timeout]]
               [reagent-sample.storage :as storage]
               [reagent-sample.page :as page]))
+
+(defn contains [string substring] 
+  (not= -1 (.indexOf string substring)))
 
 ;; -------------------------
 ;; Views
@@ -62,7 +65,37 @@
       :on-change #(do (swap! page-data assoc :title (-> % .-target .-value))
                       (storage/save! (page/get-permalink @page-data) @page-data))}]))
 
+(defn debounce [in ms]
+  (let [out (chan)]
+    (go-loop [last-val nil]
+      (let [val (if (nil? last-val) (<! in) last-val)
+            timer (timeout ms)
+            [new-val ch] (alts! [in timer])]
+        (condp = ch
+          timer (do (>! out val) (recur nil))
+          in (recur new-val))))
+    out))
+
+(defn watch-chan [atom]
+  (let [ch (chan)]
+    (add-watch atom (gensym) 
+      (fn [_ _ prev current]
+        (when-not (= prev current)
+          (put! ch current))))
+    ch))
+
+(defn watch-in-chan [atom ks]
+  (-> (watch-chan app-db)
+      (pipe (chan 1 (map #(get-in % ks))))))
+
 (def page-chan (chan))
+
+(def page-changes  
+  (watch-in-chan app-db [:current-route 1 :page]))
+
+(go-loop []
+  (let [page (<! page-changes)]
+    (recur)))
 
 ; Save updated pages to localStorage
 (go-loop []
@@ -89,10 +122,12 @@
 
 (defn page-content-textarea [page]
   (let [{:keys [contents]} @page]
+    (println "CHANGING")
     (put! textarea->code-mirror-chan contents)
     [:textarea
      {:style {:width "100%" :height "500px" :display "none"}
-      :value contents}]))
+      :value contents
+      :on-change #()}]))
 
 (def page-content-field 
   (with-meta page-content-textarea
@@ -112,19 +147,38 @@
          ; the wiki page changes. Without this, the `editor` never updates 
          ; when contents get updated w/o being explicitly being typed here.
          (go-loop []
-           (let [changes (<! textarea->code-mirror-chan)]
-             (when-not (= changes (.getValue editor))
-                (.setValue editor changes))
+           (let [changes (<! textarea->code-mirror-chan)
+                 first-line (.getLine editor 0)]
+             ; Typing in the CodeMirror editor really quickly causes the chan 
+             ; to update too slowly and makes the `when-not` block below execute, 
+             ; even though it shoudn't. This causes the cursor to move back to the
+             ; beginning of the editor.  For now, I solve this by checking whether
+             ; the first line is in the changes ¯\_(ツ)_/¯
+             (when (not (contains changes first-line) ) 
+               (.setValue editor changes))
              (recur)))))}))
 
+(defn editor [{:keys [page editing]}]
+  (if-not editing 
+    [:div] 
+    [:div#edit-container 
+     [:div#edit
+      [page-title-field page]
+      [page-content-field page]]]))
+
 (defn wiki-page-contents [page]
-  (let [{:keys [title contents]} @page] 
-    [:section#content
-     [:article#page
-      [:h1 title]
-      [:article [markdown-content contents]]]
-     [page-title-field page]
-     [page-content-field page]]))
+  (let [editing (atom false)]
+    (fn [page]
+      (let [{:keys [title contents]} @page] 
+        [:section#content
+          [:div#page-container
+            [:button.edit-button 
+             {:on-click #(swap! editing not)} 
+             (if-not @editing "edit" "done")]
+            [:article#page
+              [:h1 title]
+              [:article [markdown-content contents]]]]
+        [editor {:page page :editing @editing}]]))))
 
 (defn wiki-page []
   (let [page (subscribe [:current-page])]

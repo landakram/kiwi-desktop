@@ -17,6 +17,7 @@
              :content "width=device-width, initial-scale=1"}]
      (include-css "//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.6/styles/default.min.css")
      (include-css "//cdnjs.cloudflare.com/ajax/libs/codemirror/5.7.0/codemirror.css")
+     (include-css "/css/typebase.css")
      (include-css (if (env :dev) "/css/site.css" "/css/site.min.css"))]
     [:body
       [:div#app

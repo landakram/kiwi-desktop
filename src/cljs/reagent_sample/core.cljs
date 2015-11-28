@@ -99,6 +99,7 @@
 
 (def page-chan (chan))
 (def page-navigate-chan (chan))
+(def page-changes (debounce page-chan 1000))
 
 ;(def page-changes  
   ;(watch-in-chan app-db [:current-route 1 :page]))
@@ -109,7 +110,7 @@
 
 ; Save updated pages to localStorage
 (go-loop []
-  (let [page (<! page-chan)]
+  (let [page (<! page-changes)]
     (storage/save! (page/get-permalink page) page)
     (recur)))
 
@@ -126,7 +127,10 @@
   ; listen to it. This is used to save to localStorage / sync to dropbox.
   [(path :current-route 1 :page) (after put-page-chan)]
   (fn [page [_ contents]]
-    (assoc-in page [:contents] contents)))
+    (-> page
+      (assoc-in [:dirty?] true)
+      (assoc-in [:contents] contents)
+      (assoc-in [:timestamp] (js/Date)))))
 
 (def textarea->code-mirror-chan (chan))
 
@@ -159,7 +163,6 @@
       (fn [this new-argv]
         (let [{:keys [contents]} (reagent.impl.util/extract-props new-argv)
               {:keys [editor value]} @local-state]
-          (println contents)
           (when-not (= value contents) 
             (.setValue (.-doc (:editor @local-state)) contents))
           ))})))
@@ -267,6 +270,5 @@
 
 (defn init! []
   (pushy/start! history)
-  (render)
-  )
+  (render))
 

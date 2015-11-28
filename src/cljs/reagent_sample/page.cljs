@@ -2,10 +2,10 @@
   (:require [clojure.string :as string]))
 
 (defn get-permalink-from-title [title]
-  (string/replace (string/lower-case title) " " "-"))
+  (string/replace (string/lower-case title) " " "_"))
 
 (defn get-title-from-permalink [permalink]
-  (string/replace (string/upper-case permalink) "-" " "))
+  (string/replace (string/upper-case permalink) "_" " "))
 
 (defn get-permalink [page]
   (get-permalink-from-title (:title page)))

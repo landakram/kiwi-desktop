@@ -1,7 +1,7 @@
 (ns reagent-sample.core
     (:require-macros [reagent.ratom :refer [reaction]]
                      [cljs.core.async.macros :refer [go-loop]])
-    (:require [reagent.core :as reagent :refer [atom]]
+    (:require [reagent.core :as reagent]
               [reagent.session :as session]
               [re-frame.db :refer [app-db]]
               [re-frame.core :as re-frame :refer [dispatch dispatch-sync register-sub subscribe register-handler after path]]
@@ -18,6 +18,9 @@
 
 (defn contains [string substring] 
   (not= -1 (.indexOf string substring)))
+
+(defn contains-in [obj ks]
+  (not (nil? (get-in obj ks))))
 
 ;; -------------------------
 ;; Views
@@ -86,16 +89,23 @@
 
 (defn watch-in-chan [atom ks]
   (-> (watch-chan app-db)
-      (pipe (chan 1 (map #(get-in % ks))))))
+      (pipe 
+        (chan 1 
+              (comp
+                ; Only pipe if the atom actually contains the keys
+                (filter #(contains-in % ks))
+                ; Finally, get the value of keys in the atom
+                (map #(get-in % ks)))))))
 
 (def page-chan (chan))
+(def page-navigate-chan (chan))
 
-(def page-changes  
-  (watch-in-chan app-db [:current-route 1 :page]))
+;(def page-changes  
+  ;(watch-in-chan app-db [:current-route 1 :page]))
 
-(go-loop []
-  (let [page (<! page-changes)]
-    (recur)))
+;(go-loop []
+  ;(let [page (<! page-changes)]
+    ;(recur)))
 
 ; Save updated pages to localStorage
 (go-loop []
@@ -120,43 +130,39 @@
 
 (def textarea->code-mirror-chan (chan))
 
-(defn page-content-textarea [page]
-  (let [{:keys [contents]} @page]
-    (println "CHANGING")
-    (put! textarea->code-mirror-chan contents)
-    [:textarea
-     {:style {:width "100%" :height "500px" :display "none"}
-      :value contents
-      :on-change #()}]))
-
-(def page-content-field 
-  (with-meta page-content-textarea
-    ; Turn the textarea into a CodeMirror editor window
-    {:component-did-mount
-     (fn [this]
-       (let [node (reagent/dom-node this)
-             editor (js/CodeMirror #(.appendChild (.-parentNode node) %)
-                                   (clj->js
-                                     {:value (.-value node)
-                                      :mode "gfm"
-                                      :theme "default"
-                                      :viewportMargin js/Infinity
-                                      :lineWrapping true}))]
-         (.on editor "change" #(dispatch [:page-edit (-> % .getValue)]))
-         ; This is pretty icky. This loop exists to update CodeMirror when
-         ; the wiki page changes. Without this, the `editor` never updates 
-         ; when contents get updated w/o being explicitly being typed here.
-         (go-loop []
-           (let [changes (<! textarea->code-mirror-chan)
-                 first-line (.getLine editor 0)]
-             ; Typing in the CodeMirror editor really quickly causes the chan 
-             ; to update too slowly and makes the `when-not` block below execute, 
-             ; even though it shoudn't. This causes the cursor to move back to the
-             ; beginning of the editor.  For now, I solve this by checking whether
-             ; the first line is in the changes ¯\_(ツ)_/¯
-             (when (not (contains changes first-line) ) 
-               (.setValue editor changes))
-             (recur)))))}))
+(defn page-content-field []
+  (let [local-state (atom {})]
+    (reagent/create-class
+      {:reagent-render 
+      (fn []
+        [:textarea
+          {:style {:width "100%" :height "500px" :display "none"}}])
+      :component-did-mount 
+      (fn [this]
+        (let [{:keys [on-change contents]} (reagent/props this)
+              node (reagent/dom-node this)
+              editor (js/CodeMirror #(.appendChild (.-parentNode node) %)
+                                    (clj->js
+                                      {:value contents
+                                        :mode "gfm"
+                                        :theme "default"
+                                        :viewportMargin js/Infinity
+                                        :lineWrapping true}))]
+          (swap! local-state assoc :editor editor)
+          (swap! local-state assoc :value contents)
+          (.on editor "change" 
+            (fn [instance change-obj]
+              (let [new-value (.getValue instance)]
+                (swap! local-state assoc :value new-value)
+                (on-change new-value))))))
+      :component-will-receive-props
+      (fn [this new-argv]
+        (let [{:keys [contents]} (reagent.impl.util/extract-props new-argv)
+              {:keys [editor value]} @local-state]
+          (println contents)
+          (when-not (= value contents) 
+            (.setValue (.-doc (:editor @local-state)) contents))
+          ))})))
 
 (defn editor [{:keys [page editing]}]
   (if-not editing 
@@ -164,10 +170,11 @@
     [:div#edit-container 
      [:div#edit
       [page-title-field page]
-      [page-content-field page]]]))
+      [page-content-field {:contents (:contents @page) 
+                           :on-change #(dispatch-sync [:page-edit %])}]]]))
 
 (defn wiki-page-contents [page]
-  (let [editing (atom false)]
+  (let [editing (reagent/atom false)]
     (fn [page]
       (let [{:keys [title contents]} @page] 
         [:section#content
@@ -189,9 +196,10 @@
 (defn home-page []
   [:div 
    [:section#content
-    [:article#page 
-      [:h1 "Home"]
-      [:p "This is just some stuff"]]]])
+    [:div#page-container
+      [:article#page 
+            [:h1 "Home"]
+            [:p "This is just some stuff"]]]]])
 
 (defn about-page []
   [:div [:h1 "This is an about page"]
@@ -203,7 +211,12 @@
   (fn [db] 
     (reaction (get-in @db [:current-route]))))
 
+(defn notify-page-change [{[route-name args] :current-route} db]
+  (when (= route-name :wiki-page-view)
+    (put! page-navigate-chan (:page args))))
+
 (register-handler :navigate 
+  [(after notify-page-change)]
   (fn [db [_ route]]
     (assoc db :current-route route)))
 

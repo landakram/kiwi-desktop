@@ -5,7 +5,7 @@
   (string/replace (string/lower-case title) " " "_"))
 
 (defn get-title-from-permalink [permalink]
-  (string/replace (string/upper-case permalink) "_" " "))
+  (string/replace (string/capitalize permalink) "_" " "))
 
 (defn get-permalink [page]
   (get-permalink-from-title (:title page)))
@@ -22,3 +22,10 @@
 (defn markdown->html [page]
   (let [content (:contents page)]
     (-> content str js/marked parse-wiki-links)))
+
+(defn new-page [permalink]
+  {:title (get-title-from-permalink permalink)
+   :contents ""
+   :timestamp (js/Date.)
+   :dirty? true})
+

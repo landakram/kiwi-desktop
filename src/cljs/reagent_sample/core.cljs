@@ -4,7 +4,7 @@
     (:require [reagent.core :as reagent]
               [reagent.session :as session]
               [re-frame.db :refer [app-db]]
-              [re-frame.core :as re-frame :refer [dispatch dispatch-sync register-sub subscribe register-handler after path]]
+              [re-frame.core :as re-frame :refer [dispatch dispatch-sync register-sub subscribe register-handler after enrich path]]
               [secretary.core :as secretary :include-macros true]
               [goog.events :as events]
               [pushy.core :as pushy]
@@ -14,13 +14,9 @@
               [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
               [cljs.core.async :refer [chan <! put! pipe timeout]]
               [reagent-sample.storage :as storage]
+              [reagent-sample.utils :as utils]
               [reagent-sample.page :as page]))
 
-(defn contains [string substring] 
-  (not= -1 (.indexOf string substring)))
-
-(defn contains-in [obj ks]
-  (not (nil? (get-in obj ks))))
 
 ;; -------------------------
 ;; Views
@@ -35,7 +31,6 @@
     ; Use initial-state as a default, but keep anything already in db
     (merge initial-state db (or state {}))))
 
-(dispatch-sync [:initialize {}])
 
 (defonce page-data
   (atom
@@ -93,12 +88,11 @@
         (chan 1 
               (comp
                 ; Only pipe if the atom actually contains the keys
-                (filter #(contains-in % ks))
+                (filter #(utils/contains-in % ks))
                 ; Finally, get the value of keys in the atom
                 (map #(get-in % ks)))))))
 
 (def page-chan (chan))
-(def page-navigate-chan (chan))
 (def page-changes (debounce page-chan 1000))
 
 ;(def page-changes  
@@ -112,6 +106,8 @@
 (go-loop []
   (let [page (<! page-changes)]
     (storage/save! (page/get-permalink page) page)
+    (when (:dirty? page)
+        (sync/write! page))
     (recur)))
 
 (defn put-page-chan [page] 
@@ -131,8 +127,6 @@
       (assoc-in [:dirty?] true)
       (assoc-in [:contents] contents)
       (assoc-in [:timestamp] (js/Date)))))
-
-(def textarea->code-mirror-chan (chan))
 
 (defn page-content-field []
   (let [local-state (atom {})]
@@ -214,12 +208,38 @@
   (fn [db] 
     (reaction (get-in @db [:current-route]))))
 
-(defn notify-page-change [{[route-name args] :current-route} db]
-  (when (= route-name :wiki-page-view)
-    (put! page-navigate-chan (:page args))))
+;(def page-navigate-chan (chan))
+
+;(defn notify-page-change [{[route-name args] :current-route} db]
+  ;(when (= route-name :wiki-page-view)
+    ;(put! page-navigate-chan (:page args))))
+
+; Ugly, but checks whether the currently displayed wiki page is the page
+(defn is-current-page [page [route-name route-args]]
+    (and (= :wiki-page-view route-name) 
+         (= (get-in route-args [:page :title]) (:title page))))
+
+; Kind of a weird use of re-frame's handlers but:
+;
+; Here, I use the enrich middleware to *save whichever assoc'd page to localStorage*.
+; Then, if the assoc'd page is currently being displayed, I update app-db.
+; (app-db only contains the currently viewed page.)
+(register-handler :assoc-page
+  [(enrich (fn [db [_ page]] 
+               (storage/save! (page/get-permalink page) page)
+               db))]
+  (fn [db [_ page]]
+    (if (is-current-page page (:current-route db))
+        (assoc-in db [:current-route 1 :page] page)
+        db)))
+
+(register-handler :pull-notes
+  [ (after #(storage/save! "cursor" (:cursor %)))]
+  (fn [db [_ pull-results]]
+    (assoc db :cursor (:cursor pull-results))))
 
 (register-handler :navigate 
-  [(after notify-page-change)]
+  ;[(after notify-page-change)]
   (fn [db [_ route]]
     (assoc db :current-route route)))
 
@@ -232,7 +252,8 @@
   (dispatch [:navigate [:about-page {}]]))
 
 (secretary/defroute "/page/:page-permalink" [page-permalink]
-  (let [page (storage/load page-permalink)]
+  (let [title (page/get-title-from-permalink page-permalink)
+        page (or (storage/load page-permalink) (page/new-page page-permalink))]
     (dispatch [:navigate [:wiki-page-view {:page page}]])))
 
 ;; -------------------------
@@ -269,6 +290,10 @@
     ;(println new-val)))
 
 (defn init! []
+  (dispatch-sync [:initialize {:cursor (storage/load "cursor")}])
   (pushy/start! history)
-  (render))
+  (render)
+  (sync/start-polling (:cursor @app-db)))
+
+
 

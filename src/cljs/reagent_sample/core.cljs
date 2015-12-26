@@ -31,12 +31,6 @@
     ; Use initial-state as a default, but keep anything already in db
     (merge initial-state db (or state {}))))
 
-
-(defonce page-data
-  (atom
-    {:title ""
-     :contents ""}))
-
 (defn highlight-code [html-node]
   (let [nodes (.querySelectorAll html-node "pre code")]
     (loop [i (.-length nodes)]
@@ -57,11 +51,7 @@
 
 (defn page-title-field [page]
   (let [{:keys [title]} @page]
-    [:input
-     {:type "text"
-      :value title
-      :on-change #(do (swap! page-data assoc :title (-> % .-target .-value))
-                      (storage/save! (page/get-permalink @page-data) @page-data))}]))
+    [:h1 title]))
 
 (defn debounce [in ms]
   (let [out (chan)]
@@ -112,8 +102,6 @@
 
 (defn put-page-chan [page] 
   (put! page-chan page))
-
-(defn persist-page [page] (storage/save! (page/get-permalink page) page))
 
 (register-handler :page-edit 
   ; This vector is middleware. 
@@ -170,33 +158,35 @@
       [page-content-field {:contents (:contents @page) 
                            :on-change #(dispatch-sync [:page-edit %])}]]]))
 
+(defn layout-header []
+  [:div.header])
+
 (defn wiki-page-contents [page]
   (let [editing (reagent/atom false)]
     (fn [page]
       (let [{:keys [title contents]} @page] 
-        [:section#content
-          [:div#page-container
+        [:section.content-wrapper
+          [:div.content
             [:button.edit-button 
              {:on-click #(swap! editing not)} 
              (if-not @editing "edit" "done")]
             [:article#page
               [:h1 title]
               [:article [markdown-content contents]]]]
-        [editor {:page page :editing @editing}]]))))
+            [editor {:page page :editing @editing}]]))))
 
 (defn wiki-page []
   (let [page (subscribe [:current-page])]
     (fn []
       [:div
+       (layout-header)
         [wiki-page-contents page]])))
 
 (defn home-page []
-  [:div 
-   [:section#content
-    [:div#page-container
-      [:article#page 
+    [:div.content
+        [:article#page 
             [:h1 "Home"]
-            [:p "This is just some stuff"]]]]])
+            [:p "This is just some stuff"]]])
 
 (defn about-page []
   [:div [:h1 "This is an about page"]

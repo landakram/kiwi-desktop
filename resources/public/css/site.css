@@ -43,25 +43,6 @@ footer a {
   margin: 4em auto;
   max-width: 90em;
 }
-#edit-container {
-  flex: 1;
-  min-width: 20em;
-  max-width: 45em;
-}
-#edit {
-  background: #fff;
-  color: #333;
-  margin-top: 10px;
-  margin-bottom: 30px;
-  margin-left: -5px;
-  padding: 2em;
-  -webkit-border-radius: 5px;
-  -moz-border-radius: 5px;
-  border-radius: 5px;
-  -webkit-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.125);
-  -moz-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.125);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.125);
-}
 #page-container {
   z-index: 10;
   flex: 1;
@@ -156,25 +137,6 @@ footer a {
 }
 #page blockquote {
   color: #999;
-}
-.tools {
-  margin-bottom: 1em;
-  text-align: right;
-}
-.CodeMirror {
-  height: auto;
-}
-.CodeMirror-scroll {
-  height: auto;
-  overflow-y: hidden;
-  overflow-x: auto;
-}
-.hidden {
-  display: none;
-}
-.edit-button {
-  float: right;
-  margin: 10px;
 }
 
 

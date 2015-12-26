@@ -1,6 +1,6 @@
 (ns reagent-sample.core
     (:require-macros [reagent.ratom :refer [reaction]]
-                     [cljs.core.async.macros :refer [go-loop]])
+                     [cljs.core.async.macros :refer [go-loop go]])
     (:require [reagent.core :as reagent]
               [reagent.session :as session]
               [re-frame.db :refer [app-db]]
@@ -14,6 +14,7 @@
               [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
               [cljs.core.async :refer [chan <! put! pipe timeout]]
               [reagent-sample.storage :as storage]
+              [reagent-sample.db :as page-db]
               [reagent-sample.utils :as utils]
               [reagent-sample.page :as page]))
 
@@ -95,9 +96,10 @@
 ; Save updated pages to localStorage
 (go-loop []
   (let [page (<! page-changes)]
-    (storage/save! (page/get-permalink page) page)
+    (page-db/save! page)
     (when (:dirty? page)
-        (sync/write! page))
+      (sync/write! page)
+      (dispatch [:assoc-dirty? page false]))
     (recur)))
 
 (defn put-page-chan [page] 
@@ -209,19 +211,27 @@
     (and (= :wiki-page-view route-name) 
          (= (get-in route-args [:page :title]) (:title page))))
 
+(defn save-page [when-to-save]
+  (let [middleware (if (= :before when-to-save) enrich after)]
+    (middleware (fn [db [_ page]] 
+                  (page-db/save! page)
+                  db))))
+(register-handler
+ :assoc-dirty?
+ [(save-page :after)]
+ (fn [db [_ page dirty?]]
+   (if (is-current-page page (:current-route db))
+     (assoc-in db [:current-route 1 :page :dirty?] dirty?)
+     db)))
+
 ; Kind of a weird use of re-frame's handlers but:
 ;
 ; Here, I use the enrich middleware to *save whichever assoc'd page to localStorage*.
-; Then, if the assoc'd page is currently being displayed, I update app-db.
-; (app-db only contains the currently viewed page.)
+; I don't update db, because if the user has typed further, they will dirty the page
+; and another sync will be run on its own.
 (register-handler :assoc-page
-  [(enrich (fn [db [_ page]] 
-               (storage/save! (page/get-permalink page) page)
-               db))]
-  (fn [db [_ page]]
-    (if (is-current-page page (:current-route db))
-        (assoc-in db [:current-route 1 :page] page)
-        db)))
+  [(save-page :before)]
+  (fn [db [_ page]] db))
 
 (register-handler :pull-notes
   [ (after #(storage/save! "cursor" (:cursor %)))]
@@ -242,9 +252,10 @@
   (dispatch [:navigate [:about-page {}]]))
 
 (secretary/defroute "/page/:page-permalink" [page-permalink]
-  (let [title (page/get-title-from-permalink page-permalink)
-        page (or (storage/load page-permalink) (page/new-page page-permalink))]
-    (dispatch [:navigate [:wiki-page-view {:page page}]])))
+  (go
+    (let [page (or (<! (page-db/load page-permalink)) (page/new-page page-permalink))]
+      (println page)
+      (dispatch [:navigate [:wiki-page-view {:page page}]]))))
 
 ;; -------------------------
 ;; History
@@ -275,15 +286,10 @@
 (def history (pushy/pushy secretary/dispatch!
   (fn [x] (when (secretary/locate-route x) x))))
 
-;(add-watch app-db :watch-current-page
-  ;(fn [key atom old-val new-val]
-    ;(println new-val)))
-
 (defn init! []
-  (dispatch-sync [:initialize {:cursor (storage/load "cursor")}])
-  (pushy/start! history)
-  (render)
-  (sync/start-polling (:cursor @app-db)))
-
-
-
+  (go
+    (let [cursor (storage/load "cursor")]
+      (dispatch-sync [:initialize {:cursor cursor}])
+      (pushy/start! history)
+      (render)
+      (sync/start-polling (:cursor @app-db)))))

@@ -73,6 +73,7 @@
   (let [{:keys [path contents timestamp]} result
         permalink (path->permalink path)]
     {:title (page/get-title-from-permalink permalink)
+     :permalink permalink
      :timestamp timestamp
      :contents contents}))
 
@@ -87,7 +88,7 @@
 
 (defn filter-error [outgoing-ch]
   (let [incoming-ch (chan)]
-    (go 
+    (go
       (try
         (let [value (<? incoming-ch)]
           (put! outgoing-ch value))
@@ -140,4 +141,11 @@
         permalink (page/get-permalink page)
         path (str "/wiki/" permalink ".md")]
     (println "(push)" path)
-    (dropbox/write client path contents (filter-error ch))))
+    (go
+      (try
+        (let [result (<? ch)]
+          (println "(push) success"))
+        (catch js/Object e
+          (dispatch [:assoc-dirty? page true])
+          (println "(push) (error)" e))))
+    (dropbox/write client path contents ch)))

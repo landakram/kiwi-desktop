@@ -8,7 +8,7 @@
   (string/replace (string/capitalize permalink) "_" " "))
 
 (defn get-permalink [page]
-  (get-permalink-from-title (:title page)))
+  (:permalink page))
 
 (defn parse-wiki-links [html-content]
   (string/replace html-content #"\[\[(.*)\]\]"
@@ -25,6 +25,7 @@
 
 (defn new-page [permalink]
   {:title (get-title-from-permalink permalink)
+   :permalink permalink
    :contents ""
    :timestamp (js/Date.)
    :dirty? true})

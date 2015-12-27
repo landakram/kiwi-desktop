@@ -37,40 +37,66 @@
     ; Use initial-state as a default, but keep anything already in db
     (merge initial-state db (or state {}))))
 
-(defn highlight-code [html-node]
-  (let [nodes (.querySelectorAll html-node "pre code")]
-    (loop [i (.-length nodes)]
-      (when-not (neg? i)
-        (when-let [item (.item nodes i)]
-          (.highlightBlock js/hljs item))
-        (recur (dec i))))))
+(defonce img-cache (atom {}))
 
-(defn convert-images [node]
-  (let [img-nodes (.querySelectorAll node "img")]
-    (doseq [img img-nodes]
-      (let [src (string/lower-case (.-src img))
-            filename (sync/path->filename src)]
-        ; If the image is a local one
-        (when (utils/contains src (.-hostname js/window.location))
-          ; Then get the corresponding blob out of IndexedDB
-          (go (let [image (<! (db/load-in "images" "path" (str "img/" filename)))
-                    object-url (.createObjectURL js/URL (:contents image))]
-                ; and set it as the img src
-                (set! (.-src img) object-url))))))))
+(defn create-dummy-node [html-contents]
+  (let [el (.createElement js/document "div")]
+    (set! (.-innerHTML el) html-contents)
+    el))
 
-(defn markdown-content [content]
-  [(with-meta
-     (fn [] [:div {:dangerouslySetInnerHTML
-         {:__html (-> content str js/marked page/parse-wiki-links)}}])
-     {:component-did-mount
-      (fn [this]
-        (let [node (reagent/dom-node this)]
-          (highlight-code node)
-          (convert-images node)))})])
+(defn img-tag->path [img-tag]
+  (let [src (string/lower-case (.-src img-tag))
+        filename (sync/path->filename src)
+        path (str "img/" filename)]
+    path))
 
-(defn page-title-field [page]
-  (let [{:keys [title]} @page]
-    [:h1 title]))
+(defn is-local-img [src]
+  (utils/contains src (.-hostname js/window.location)))
+
+(defn load-images-from-cache [html-contents]
+  (let [el (create-dummy-node html-contents)
+        img-nodes (.querySelectorAll el "img")]
+        (doseq [img img-nodes]
+          (let [src (.-src img)
+                path (img-tag->path img)]
+            ; If the image is a local one
+            ; Check the img cache to see if we already have a object URL for it
+            (when (and (is-local-img src)
+                       (not (utils/contains src "blob:")))
+              (when-let [cached-src (get @img-cache path)]
+                (set! (.-src img) cached-src)))))
+        (.-innerHTML el)))
+
+(defn load-images [html-contents]
+  (let [ch (chan)
+        el (create-dummy-node html-contents)
+        img-nodes (.querySelectorAll el "img")]
+    (go
+      (doseq [img img-nodes]
+        (let [src (.-src img)
+              path (img-tag->path img)]
+          ; If the image is a local one
+          (when (and (is-local-img src)
+                     (not (utils/contains src "blob:"))
+                     ; Check the img cache to see if we already have a object URL for it
+                     (not (get @img-cache path)))
+            ; Otherwise, get the corresponding blob out of IndexedDB
+            (let [image (<! (db/load-in "images" "path" path))
+                  object-url (.createObjectURL js/URL (:contents image))]
+                  ; and set it as the img src
+              (swap! img-cache assoc path object-url)
+              (set! (.-src img) object-url)))))
+      (put! ch (.-innerHTML el)))
+    ch))
+
+
+(defn markdown->html [markdown]
+    (let [html-contents (-> markdown
+                            str
+                            js/marked
+                            page/parse-wiki-links
+                            load-images-from-cache)]
+    html-contents))
 
 (defn debounce [in ms]
   (let [out (chan)]
@@ -86,23 +112,46 @@
 (defn watch-chan [atom]
   (let [ch (chan)]
     (add-watch atom (gensym) 
-      (fn [_ _ prev current]
-        (when-not (= prev current)
-          (put! ch current))))
+               (fn [_ _ prev current]
+                 (when-not (= prev current)
+                   (put! ch current))))
     ch))
 
 (defn watch-in-chan [atom ks]
   (-> (watch-chan app-db)
       (pipe 
-        (chan 1 
-              (comp
-                ; Only pipe if the atom actually contains the keys
-                (filter #(utils/contains-in % ks))
-                ; Finally, get the value of keys in the atom
-                (map #(get-in % ks)))))))
+       (chan 1 
+             (comp
+                                        ; Only pipe if the atom actually contains the keys
+              (filter #(utils/contains-in % ks))
+                                        ; Finally, get the value of keys in the atom
+              (map #(get-in % ks)))))))
 
 (def page-chan (chan))
 (def page-changes (debounce page-chan 1000))
+
+(defn highlight-code [html-node]
+  (let [nodes (.querySelectorAll html-node "pre code")]
+    (loop [i (.-length nodes)]
+      (when-not (neg? i)
+        (when-let [item (.item nodes i)]
+          (.highlightBlock js/hljs item))
+        (recur (dec i))))))
+
+
+(defn markdown-content [content]
+  [(with-meta
+     (fn [] [:div {:dangerouslySetInnerHTML
+                   {:__html (markdown->html content)}}])
+     {:component-did-mount
+      (fn [this]
+        (let [node (reagent/dom-node this)]
+          (highlight-code node)))})])
+
+
+(defn page-title-field [page]
+  (let [{:keys [title]} @page]
+    [:h1 title]))
 
 ;(def page-changes  
   ;(watch-in-chan app-db [:current-route 1 :page]))
@@ -166,8 +215,7 @@
         (let [{:keys [contents]} (reagent.impl.util/extract-props new-argv)
               {:keys [editor value]} @local-state]
           (when-not (= value contents) 
-            (.setValue (.-doc (:editor @local-state)) contents))
-          ))})))
+            (.setValue (.-doc (:editor @local-state)) contents))))})))
 
 (defn editor [{:keys [page editing]}]
   (if-not editing 
@@ -200,7 +248,7 @@
              (if-not @editing "Edit" "Done")]
             [:article#page
               [:h1.post-title title]
-              [:article [markdown-content contents]]]]
+              [:article (markdown-content contents)]]]
             [editor {:page page :editing @editing}]]))))
 
 (defn wiki-page []
@@ -209,6 +257,15 @@
       [:div
        (layout-header)
         [wiki-page-contents page]])))
+
+(defn settings-page []
+  [:div
+   (layout-header)
+   [:section.content-wrapper
+    [:div.content
+     [:article#page
+      [:h1 "Settings"]
+      [:p "These are your settings"]]]]])
 
 (defn home-page []
   [:div
@@ -277,12 +334,18 @@
 (secretary/defroute "/" []
   (dispatch [:navigate [:home-page {}]]))
 
+(secretary/defroute "/settings" []
+  (dispatch [:navigate [:settings-page {}]]))
+
 (secretary/defroute "/about" []
   (dispatch [:navigate [:about-page {}]]))
 
 (secretary/defroute "/page/:page-permalink" [page-permalink]
   (go
-    (let [page (or (<! (page-db/load page-permalink)) (page/new-page page-permalink))]
+    (let [page (or (<! (page-db/load page-permalink)) (page/new-page page-permalink))
+          html-contents (markdown->html (:contents page))
+          ;; Preload any internal images, so that they can be synchronously displayed whenever the page re-renders
+          with-links (<! (load-images html-contents))]
       (dispatch [:navigate [:wiki-page-view {:page page}]]))))
 
 ;; -------------------------
@@ -304,6 +367,9 @@
 (defmethod page :wiki-page-view [_ _]
   [wiki-page])
 
+(defmethod page :settings-page [_ _]
+  [settings-page])
+
 (defn app []
   (let [current-route (subscribe [:current-route])]
     (apply page @current-route)))
@@ -321,3 +387,4 @@
       (pushy/start! history)
       (render)
       (sync/start-polling (:cursor @app-db)))))
+

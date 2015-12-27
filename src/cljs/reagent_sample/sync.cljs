@@ -7,6 +7,7 @@
               [re-frame.core :refer [dispatch]]
               [re-frame.db :refer [app-db]]
               [clojure.string :as string]
+              [reagent-sample.db :as db]
               [cljs.core.async :as async :refer [timeout chan put! <! pub sub]]))
 
 (defonce dropbox-key "***REMOVED***")
@@ -29,23 +30,35 @@
   IError
   (-error? [this] false))
 
+(defn throw-error [v]
+  (if (-error? v)
+    (throw v)
+    v))
+
 (defn start []
   (dropbox/authenticate client false))
 
 (start)
 
-
-;(.readdir client "wiki"
-          ;(fn [err entries dir-stat entry-stats]
-            ;(println entries)))
+;; (.readdir client "public/img"
+;;           (fn [err entries dir-stat entry-stats]
+;;             (println entries)
+;;             (let [ch (chan)]
+;;               (go
+;;                 (dropbox/read client (str "public/img/" (first entries)) ch)
+;;                 (let [read-result (<? ch)]
+;;                     (println read-result))))))
 
 
 ;(p "what")
 
+(defn path->filename [path]
+  (-> path
+      (string/split "/")
+      last))
+
 (defn path->permalink [path]
-  (-> path 
-      (string/split "/") 
-      last 
+  (-> (path->filename path) 
       (string/split ".") 
       first))
 
@@ -77,14 +90,18 @@
      :timestamp timestamp
      :contents contents}))
 
+(defn ->img-results [result]
+  (let [{:keys [path contents mime_type]} result
+        permalink (path->filename path)]
+    {:path (str "img/" permalink)
+     :contents contents
+     :mime-type mime_type}))
+
 (defonce poll-results (chan 1 (map ->poll-results)))
 (defonce pull-results (chan 1 (map ->pull-results)))
 (defonce page-results (chan 1 (map ->page-results)))
+(defonce img-results (chan 1 (map ->img-results)))
 
-(defn throw-error [v]
-  (if (-error? v)
-    (throw v)
-    v))
 
 (defn filter-error [outgoing-ch]
   (let [incoming-ch (chan)]
@@ -100,6 +117,7 @@
   (go-loop []
     (let [result (<! pull-results)
           changes (:changes result)
+          img-changes (filter #(utils/contains (:path %) "img/") changes)
           page-changes (filter #(utils/contains (:path %) ".md") changes)]
       (println "(pull)" result)
       (dispatch [:pull-notes result])
@@ -111,6 +129,11 @@
             ; Add the timestamp into the final read data
             (let [read-result (<? ch)]
               (put! page-results (merge read-result {:timestamp timestamp})))))
+      (doseq [{:keys [path deleted? timestamp]} img-changes]
+        (let [ch (chan)]
+          (dropbox/read client path ch :options {:blob true})
+          (let [read-result (<? ch)]
+            (put! img-results read-result))))
       (recur))))
 
 (defonce page-loop
@@ -119,6 +142,13 @@
         (dispatch [:assoc-page page])
         (println page)
         (recur))))
+
+(defonce img-loop
+  (go-loop []
+    (let [img (<! img-results)]
+      (println "(image)" (:path img))
+      (db/save-in! "images" img)
+      (recur))))
 
 ; When started, triggers a poll every `:retry-timeout`
 (defonce poll-loop

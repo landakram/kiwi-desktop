@@ -7,26 +7,35 @@
   (let [db (js/Dexie. "kiwi")]
     (-> db
         (.version 1)
-        (.stores #js {"pages" "&permalink"}))
+        (.stores #js {"pages" "&permalink"
+                      "images" "&path"}))
     (.open db)
     db))
 
-(defonce pages (create-db))
+(defonce db (create-db))
 
-(defn save! [data]
+(set! (.-db js/window) db)
+
+(defn save-in! [store data & [key]]
   (let [ch (chan)]
-    (println "(save)" (:permalink data))
-    (-> (.-pages pages)
-        (.put (clj->js data))
+    (println "(save)" store)
+    (-> (aget db store)
+        (.put (clj->js data) key)
         (.then #(put! ch %)))
     ch))
 
-(defn load [key]
+(defn load-in [store key-name key]
   (let [ch (chan)]
     (println "(load)" key)
-    (-> (.-pages pages)
-        (.where "permalink")
+    (-> (aget db store)
+        (.where key-name)
         (.equals key)
         (.first)
         (.then #(put! ch (js->clj % :keywordize-keys true))))
     ch))
+
+(defn save! [data]
+  (save-in! "pages" data))
+
+(defn load [key]
+  (load-in "pages" "permalink" key))

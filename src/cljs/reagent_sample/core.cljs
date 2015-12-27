@@ -9,6 +9,7 @@
               [goog.events :as events]
               [pushy.core :as pushy]
               [reagent-sample.sync :as sync]
+              [reagent-sample.db :as db]
               [clojure.string :as string]
               [goog.history.EventType :as EventType]
               [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
@@ -21,6 +22,10 @@
 
 ;; -------------------------
 ;; Views
+
+(extend-type js/NodeList
+  ISeqable
+    (-seq [array] (array-seq array 0)))
 
 (defonce initial-state {:current-route [:home-page {}]})
 
@@ -40,6 +45,18 @@
           (.highlightBlock js/hljs item))
         (recur (dec i))))))
 
+(defn convert-images [node]
+  (let [img-nodes (.querySelectorAll node "img")]
+    (doseq [img img-nodes]
+      (let [src (string/lower-case (.-src img))
+            filename (sync/path->filename src)]
+        ; If the image is a local one
+        (when (utils/contains src (.-hostname js/window.location))
+          ; Then get the corresponding blob out of IndexedDB
+          (go (let [image (<! (db/load-in "images" "path" (str "img/" filename)))
+                    object-url (.createObjectURL js/URL (:contents image))]
+                ; and set it as the img src
+                (set! (.-src img) object-url))))))))
 
 (defn markdown-content [content]
   [(with-meta
@@ -48,7 +65,8 @@
      {:component-did-mount
       (fn [this]
         (let [node (reagent/dom-node this)]
-          (highlight-code node)))})])
+          (highlight-code node)
+          (convert-images node)))})])
 
 (defn page-title-field [page]
   (let [{:keys [title]} @page]
@@ -161,7 +179,15 @@
                            :on-change #(dispatch-sync [:page-edit %])}]]]))
 
 (defn layout-header []
-  [:div.header])
+  [:div.header
+   [:div [:a {:href "/page/home"} "Home"]]
+    [:nav.navigation
+        [:ul
+            [:li
+            [:a {:href "/search"} "Search"]]
+            [:li
+            [:a {:href "/settings"} "Settings"]]
+            ]]])
 
 (defn wiki-page-contents [page]
   (let [editing (reagent/atom false)]
@@ -171,9 +197,9 @@
           [:div.content
             [:button.edit-button 
              {:on-click #(swap! editing not)} 
-             (if-not @editing "edit" "done")]
+             (if-not @editing "Edit" "Done")]
             [:article#page
-              [:h1 title]
+              [:h1.post-title title]
               [:article [markdown-content contents]]]]
             [editor {:page page :editing @editing}]]))))
 
@@ -185,10 +211,13 @@
         [wiki-page-contents page]])))
 
 (defn home-page []
+  [:div
+   (layout-header)
+   [:section.content-wrapper
     [:div.content
         [:article#page 
-            [:h1 "Home"]
-            [:p "This is just some stuff"]]])
+            [:h1 ""]
+            [:p ""]]]]])
 
 (defn about-page []
   [:div [:h1 "This is an about page"]
@@ -254,7 +283,6 @@
 (secretary/defroute "/page/:page-permalink" [page-permalink]
   (go
     (let [page (or (<! (page-db/load page-permalink)) (page/new-page page-permalink))]
-      (println page)
       (dispatch [:navigate [:wiki-page-view {:page page}]]))))
 
 ;; -------------------------

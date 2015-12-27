@@ -24,8 +24,11 @@
      (include-css (if (env :dev) "/css/styles.css" "/css/styles.min.css"))]
     [:body
       [:div.body {:id "app"}
+       [:div
+       [:div.header ""]
+       [:section.content-wrapper
         [:div.content
-            [:article#page ""]]]
+            [:article#page ""]]]]]
      (include-js "//cdnjs.cloudflare.com/ajax/libs/dropbox.js/0.10.3/dropbox.js")
      (include-js "//cdnjs.cloudflare.com/ajax/libs/marked/0.3.2/marked.min.js")
      (include-js "//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.6/highlight.min.js")

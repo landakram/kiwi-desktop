@@ -35,10 +35,18 @@
     (throw v)
     v))
 
-(defn start []
-  (dropbox/authenticate client false))
+(defn link []
+  (go
+    (<! (dropbox/authenticate client true))
+    (dropbox/authenticated? client)))
 
-(start)
+(defn connect []
+  (go
+    (<! (dropbox/authenticate client false))
+    (dropbox/authenticated? client)))
+
+(defn disconnect []
+  (go (<! (dropbox/logout client))))
 
 ;; (.readdir client "public/img"
 ;;           (fn [err entries dir-stat entry-stats]
@@ -48,9 +56,6 @@
 ;;                 (dropbox/read client (str "public/img/" (first entries)) ch)
 ;;                 (let [read-result (<? ch)]
 ;;                     (println read-result))))))
-
-
-;(p "what")
 
 (defn path->filename [path]
   (-> path

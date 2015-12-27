@@ -19,7 +19,6 @@
               [reagent-sample.utils :as utils]
               [reagent-sample.page :as page]))
 
-
 ;; -------------------------
 ;; Views
 
@@ -31,6 +30,9 @@
 
 (register-sub :current-page
   (fn [db] (reaction (get-in @db [:current-route 1 :page]))))
+
+(register-sub :linked-with-dropbox?
+   (fn [db] (reaction (get-in @db [:linked-with-dropbox?]))))
 
 (register-handler :initialize
   (fn [db [_ state]]
@@ -259,13 +261,19 @@
         [wiki-page-contents page]])))
 
 (defn settings-page []
-  [:div
-   (layout-header)
-   [:section.content-wrapper
-    [:div.content
-     [:article#page
-      [:h1 "Settings"]
-      [:p "These are your settings"]]]]])
+  (let [linked-with-dropbox? (subscribe [:linked-with-dropbox?])]
+    (fn []
+        [:div
+        (layout-header)
+        [:section.content-wrapper
+        [:div.content
+        [:article#page
+            [:h1 "Settings"]
+            [:p "These are your settings."]
+            [:h2 "Sync"]
+            [:button
+             {:on-click #(dispatch [:linked-with-dropbox (not @linked-with-dropbox?)])}
+             (if @linked-with-dropbox? "Unlink Dropbox" "Link with Dropbox")]]]]])))
 
 (defn home-page []
   [:div
@@ -329,6 +337,14 @@
   (fn [db [_ route]]
     (assoc db :current-route route)))
 
+(register-handler
+ :linked-with-dropbox
+ (fn [db [_ linked-with-dropbox?]]
+   (if linked-with-dropbox?
+     (sync/link)
+     (sync/disconnect))
+   (assoc db :linked-with-dropbox? linked-with-dropbox?)))
+
 (secretary/set-config! :prefix "/")
 
 (secretary/defroute "/" []
@@ -382,9 +398,14 @@
 
 (defn init! []
   (go
-    (let [cursor (storage/load "cursor")]
-      (dispatch-sync [:initialize {:cursor cursor}])
+    (let [cursor (storage/load "cursor")
+          linked-with-dropbox? (storage/load "linked-with-dropbox")]
+      (dispatch-sync [:initialize {:cursor cursor
+                                   :linked-with-dropbox? linked-with-dropbox?}])
       (pushy/start! history)
       (render)
-      (sync/start-polling (:cursor @app-db)))))
 
+      (when (<! (sync/connect))
+        (swap! app-db assoc :linked-with-dropbox? true)
+
+        (sync/start-polling (:cursor @app-db))))))

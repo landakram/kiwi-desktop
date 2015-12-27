@@ -11,7 +11,7 @@
   (:permalink page))
 
 (defn parse-wiki-links [html-content]
-  (string/replace html-content #"\[\[(.*)\]\]"
+  (string/replace html-content #"\[\[(.+?)\]\]"
     (fn [[_ page-title]]
       (str "<a class=\"internal\" href=\"/page/"
            (get-permalink-from-title page-title)

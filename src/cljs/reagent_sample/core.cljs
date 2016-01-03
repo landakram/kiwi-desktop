@@ -293,7 +293,7 @@
         [:section.content-wrapper
         [:div.content
         [:article#page
-            [:h1 "Settings"]
+            [:h1.post-title "Settings"]
             [:p "These are your settings."]
             [:h2 "Sync"]
             [:button
@@ -302,13 +302,18 @@
 
 (defn page-list-item [page]
   (let [title (:title page)
+        contents (:contents page)
+        preview (->> (string/split contents #" ")
+                     (take 10)
+                     (string/join " "))
         permalink (:permalink page)
         date-format (f/formatter "MMMM d, yyyy")
         date (f/unparse date-format (coerce/from-date (:timestamp page)))
         path (str "/page/" permalink)]
     [:li
      [:a.page-link {:href path} title]
-     [:span.page-date date]]))
+     [:span.page-date date]
+     [:p.page-preview (str preview "...")]]))
 
 (defn search-page []
   (let [pages (subscribe [:all-pages])]
@@ -318,7 +323,7 @@
       [:section.content-wrapper
       [:div.content
         [:article#page
-          [:h1 "Search"]
+          [:h1.post-title "Search"]
           [:ul.page-list
             (map page-list-item @pages)]]]]])))
 
@@ -328,7 +333,7 @@
    [:section.content-wrapper
     [:div.content
         [:article#page 
-            [:h1 ""]
+            [:h1.post-title ""]
             [:p ""]]]]])
 
 (defn about-page []

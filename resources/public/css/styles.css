@@ -218,9 +218,22 @@ img.emoji {
     line-height: 2em;
 }
 .page-list li {
+    margin: 20px 0;
+    border-bottom: 2px solid #f6f6f6;
 }
-
+.page-link {
+    font-weight: 600;
+}
 .page-date {
     float: right;
     color: #C3C3C3;
+}
+.page-preview {
+    margin-top: 0;
+    color: #666;
+}
+
+.task-list {
+    list-style: none;
+    padding-left: 0;
 }

@@ -1,3 +1,8 @@
+/*Style internal wiki links i.e [[Link]]*/
+.cm-internal-link {
+    color: blue;
+}
+
 .tools {
   margin-bottom: 1em;
   text-align: right;

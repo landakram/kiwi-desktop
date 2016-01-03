@@ -198,10 +198,29 @@
       (fn [this]
         (let [{:keys [on-change contents]} (reagent/props this)
               node (reagent/dom-node this)
+              token-fn (fn [stream state] 
+                        (if-let [match (when (.match stream "[[")
+                                        (loop [ch (.next stream)]
+                                          (if (and (= ch "]") (= (.next stream) "]"))
+                                            (do (.eat stream "]")
+                                                (println "found link")
+                                                "internal-link")
+                                            (recur (.next stream)))))]
+                          match
+                          (do
+                            (while (and (.next stream) 
+                                      (not (.match stream "[[" false)))
+                            (println "hey")))))
+              mode (.defineMode js/CodeMirror "kiwi" 
+                     (fn [config, parser-config]
+                       (.overlayMode js/CodeMirror (.getMode js/CodeMirror 
+                                               config 
+                                               (or (.-backdrop parser-config) "gfm"))
+                                     #js {:token token-fn})))
               editor (js/CodeMirror #(.appendChild (.-parentNode node) %)
                                     (clj->js
                                       {:value contents
-                                        :mode "gfm"
+                                        :mode "kiwi"
                                         :theme "default"
                                         :viewportMargin js/Infinity
                                         :lineWrapping true}))]

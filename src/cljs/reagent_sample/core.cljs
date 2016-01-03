@@ -14,6 +14,8 @@
               [goog.history.EventType :as EventType]
               [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
               [cljs.core.async :refer [chan <! put! pipe timeout]]
+              [cljs-time.format :as f]
+              [cljs-time.coerce :as coerce]
               [reagent-sample.storage :as storage]
               [reagent-sample.db :as page-db]
               [reagent-sample.utils :as utils]
@@ -27,6 +29,10 @@
     (-seq [array] (array-seq array 0)))
 
 (defonce initial-state {:current-route [:home-page {}]})
+
+(register-sub 
+  :all-pages
+  (fn [db] (reaction (get-in @db [:current-route 1 :pages]))))
 
 (register-sub :current-page
   (fn [db] (reaction (get-in @db [:current-route 1 :page]))))
@@ -294,6 +300,28 @@
              {:on-click #(dispatch [:linked-with-dropbox (not @linked-with-dropbox?)])}
              (if @linked-with-dropbox? "Unlink Dropbox" "Link with Dropbox")]]]]])))
 
+(defn page-list-item [page]
+  (let [title (:title page)
+        permalink (:permalink page)
+        date-format (f/formatter "MMMM d, yyyy")
+        date (f/unparse date-format (coerce/from-date (:timestamp page)))
+        path (str "/page/" permalink)]
+    [:li
+     [:a.page-link {:href path} title]
+     [:span.page-date date]]))
+
+(defn search-page []
+  (let [pages (subscribe [:all-pages])]
+    (fn []
+      [:div
+      (layout-header)
+      [:section.content-wrapper
+      [:div.content
+        [:article#page
+          [:h1 "Search"]
+          [:ul.page-list
+            (map page-list-item @pages)]]]]])))
+
 (defn home-page []
   [:div
    (layout-header)
@@ -372,6 +400,11 @@
 (secretary/defroute "/settings" []
   (dispatch [:navigate [:settings-page {}]]))
 
+(secretary/defroute "/search" []
+  (go
+    (let [pages (<! (page-db/load-all!))]
+      (dispatch [:navigate [:search-page {:pages pages}]]))))
+
 (secretary/defroute "/about" []
   (dispatch [:navigate [:about-page {}]]))
 
@@ -404,6 +437,9 @@
 
 (defmethod page :settings-page [_ _]
   [settings-page])
+
+(defmethod page :search-page [_ _]
+  [search-page])
 
 (defn app []
   (let [current-route (subscribe [:current-route])]

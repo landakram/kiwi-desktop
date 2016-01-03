@@ -212,3 +212,15 @@ img.emoji {
   background: #fecccc;
   border: 1px solid #fcb1b1;
 }
+.page-list {
+    padding-left: 0;
+    list-style: none;
+    line-height: 2em;
+}
+.page-list li {
+}
+
+.page-date {
+    float: right;
+    color: #C3C3C3;
+}

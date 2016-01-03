@@ -34,6 +34,19 @@
         (.then #(put! ch (js->clj % :keywordize-keys true))))
     ch))
 
+
+;; db.pages.toCollection().reverse().sortBy("timestamp").then(p);
+(defn load-all! []
+  (let [ch (chan)]
+    (println "(load) all")
+    (-> (aget db "pages")
+        (.toCollection)
+        (.reverse)
+        (.sortBy "timestamp")
+        (.then #(put! ch (js->clj % :keywordize-keys true))))
+    ch))
+
+
 (defn save! [data]
   (save-in! "pages" data))
 

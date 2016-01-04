@@ -191,7 +191,7 @@
     (-> page
       (assoc-in [:dirty?] true)
       (assoc-in [:contents] contents)
-      (assoc-in [:timestamp] (js/Date)))))
+      (assoc-in [:timestamp] (js/Date.)))))
 
 (defn page-content-field []
   (let [local-state (atom {})]

@@ -221,6 +221,9 @@ img.emoji {
     margin: 20px 0;
     border-bottom: 2px solid #f6f6f6;
 }
+.page-list li:last-child {
+    border-bottom: none;
+}
 .page-link {
     font-weight: 600;
 }

@@ -211,12 +211,13 @@
                                             (do (.eat stream "]")
                                                 (println "found link")
                                                 "internal-link")
-                                            (recur (.next stream)))))]
+                                            (when-not (nil? ch) (recur (.next stream))))))]
                           match
                           (do
                             (while (and (.next stream) 
-                                      (not (.match stream "[[" false)))
-                            (println "hey")))))
+                                      (not (.match stream "[[" false))
+                                      (not (.match stream "\n" false)))
+                              1))))
               mode (.defineMode js/CodeMirror "kiwi" 
                      (fn [config, parser-config]
                        (.overlayMode js/CodeMirror (.getMode js/CodeMirror 

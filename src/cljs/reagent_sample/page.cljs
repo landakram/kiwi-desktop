@@ -1,11 +1,18 @@
 (ns reagent-sample.page
   (:require [clojure.string :as string]))
 
+(defn capitalize-words [s]
+  (->> (string/split (str s) #"\b")
+       (map string/capitalize)
+       (string/join)))
+
 (defn get-permalink-from-title [title]
   (string/replace (string/lower-case title) " " "_"))
 
 (defn get-title-from-permalink [permalink]
-  (string/replace (string/capitalize permalink) "_" " "))
+  (-> permalink
+      (string/replace "_" " ")
+      (capitalize-words)))
 
 (defn get-permalink [page]
   (:permalink page))

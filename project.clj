@@ -21,7 +21,11 @@
                  [re-frame "0.5.0-alpha1"]
                  [tailrecursion/cljson "1.0.7"]
                  [secretary "1.2.3"]
-                 [cljsjs/dexie "1.2.0-1"]]
+                 [cljsjs/dexie "1.2.0-1"]
+                 [com.andrewmcveigh/cljs-time "0.3.14"]]
+
+  :mirrors {#"clojars" {:name "clojars mirror"
+                        :url "https://clojars-mirror.tcrawley.org/repo/"}}
 
   :plugins [[lein-environ "1.0.1"]
             [lein-asset-minifier "0.2.2"]]

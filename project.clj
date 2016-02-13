@@ -57,11 +57,14 @@
                                         :source-map true
                                         :pretty-print  true}}}}
 
-  :profiles {:dev {:repl-options {:init-ns reagent-sample.repl}
+  :profiles {:dev {:repl-options {:init-ns reagent-sample.repl
+                                  :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
                    :dependencies [[ring/ring-mock "0.3.0"]
                                   [ring/ring-devel "1.4.0"]
                                   [lein-figwheel "0.4.0"]
+                                  [figwheel-sidecar "0.5.0-1"]
+                                  [com.cemerick/piggieback "0.2.1"]
                                   [org.clojure/tools.nrepl "0.2.11"]
                                   [pjstadig/humane-test-output "0.7.0"]]
 
@@ -82,9 +85,7 @@
 
                    :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]
                                               :compiler {:main "reagent-sample.dev"
-                                                         :source-map true}}
-}
-}}
+                                                         :source-map true}}}}}
 
              :uberjar {:hooks [leiningen.cljsbuild minify-assets.plugin/hooks]
                        :env {:production true}

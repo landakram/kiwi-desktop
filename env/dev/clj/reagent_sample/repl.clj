@@ -1,7 +1,8 @@
 (ns reagent-sample.repl
   (:use reagent-sample.handler
         ring.server.standalone
-        [ring.middleware file-info file]))
+        [ring.middleware file-info file])
+  (:require [figwheel-sidecar.repl-api :as repl-api]))
 
 (defonce server (atom nil))
 
@@ -30,3 +31,25 @@
 (defn stop-server []
   (.stop @server)
   (reset! server nil))
+
+(def figwheel-config
+  {:figwheel-options {:http-server-root "public"
+                              :server-port 3449
+                              :nrepl-port 7002
+                              :css-dirs ["resources/public/css"]
+                              :ring-handler reagent-sample.handler/app}
+   :build-ids ["dev"]
+   :all-builds
+   [{:id "dev"
+     :source-paths ["src/clj" "src/cljs" "src/cljc" "env/dev/cljs"]
+     :compiler {:output-to     "resources/public/js/app.js"
+                :output-dir    "resources/public/js/out"
+                :asset-path   "/js/out"
+                :main "reagent-sample.dev"
+                :optimizations :none
+                :source-map true
+                :pretty-print  true}}]})
+
+(defn start []
+  (repl-api/start-figwheel! figwheel-config))
+

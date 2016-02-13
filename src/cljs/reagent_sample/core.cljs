@@ -416,7 +416,10 @@
 
 (secretary/defroute "/page/:page-permalink" [page-permalink]
   (go
-    (let [page (or (<! (page-db/load page-permalink)) (page/new-page page-permalink))
+    (let [maybe-page (<! (page-db/load page-permalink))
+          page (if (= maybe-page :not-found) 
+                 (page/new-page page-permalink) 
+                 maybe-page)
           html-contents (markdown->html (:contents page))
           ;; Preload any internal images, so that they can be synchronously displayed whenever the page re-renders
           with-links (<! (load-images html-contents))]

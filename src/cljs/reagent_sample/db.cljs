@@ -31,7 +31,11 @@
         (.where key-name)
         (.equals key)
         (.first)
-        (.then #(put! ch (js->clj % :keywordize-keys true))))
+        (.then (fn [page] 
+                 (let [result (if (nil? page)
+                                :not-found
+                                (js->clj page :keywordize-keys true))]
+                   (put! ch result)))))
     ch))
 
 

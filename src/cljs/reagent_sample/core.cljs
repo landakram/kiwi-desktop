@@ -136,7 +136,7 @@
               (map #(get-in % ks)))))))
 
 (def page-chan (chan))
-(def page-changes (debounce page-chan 1000))
+(def page-changes (debounce page-chan 3000))
 
 (defn highlight-code [html-node]
   (let [nodes (.querySelectorAll html-node "pre code")]

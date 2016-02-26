@@ -37,3 +37,8 @@
    :timestamp (js/Date.)
    :dirty? true})
 
+; Ugly, but checks whether the currently displayed wiki page is the page
+(defn is-current-page [page [route-name route-args]]
+    (and (= :wiki-page-view route-name) 
+         (= (get-in route-args [:page :title]) (:title page))))
+

@@ -62,14 +62,14 @@
 
                    :dependencies [[ring/ring-mock "0.3.0"]
                                   [ring/ring-devel "1.4.0"]
-                                  [lein-figwheel "0.4.0"]
-                                  [figwheel-sidecar "0.5.0-1"]
+                                  [lein-figwheel "0.5.0-6"]
+                                  [figwheel-sidecar "0.5.0-6"]
                                   [com.cemerick/piggieback "0.2.1"]
                                   [org.clojure/tools.nrepl "0.2.11"]
                                   [pjstadig/humane-test-output "0.7.0"]]
 
                    :source-paths ["env/dev/clj"]
-                   :plugins [[lein-figwheel "0.4.0"]
+                   :plugins [[lein-figwheel "0.5.0-6"]
                              [lein-cljsbuild "1.0.6"]]
 
                    :injections [(require 'pjstadig.humane-test-output)

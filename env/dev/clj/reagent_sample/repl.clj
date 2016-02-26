@@ -53,3 +53,5 @@
 (defn start []
   (repl-api/start-figwheel! figwheel-config))
 
+(defn cljs []
+  (repl-api/cljs-repl))

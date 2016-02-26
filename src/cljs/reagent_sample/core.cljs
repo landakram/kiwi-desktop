@@ -8,16 +8,18 @@
               [secretary.core :as secretary :include-macros true]
               [goog.events :as events]
               [pushy.core :as pushy]
-              [reagent-sample.sync :as sync]
-              [reagent-sample.db :as db]
               [clojure.string :as string]
               [goog.history.EventType :as EventType]
               [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
               [cljs.core.async :refer [chan <! put! pipe timeout]]
               [cljs-time.format :as f]
               [cljs-time.coerce :as coerce]
+              [reagent-sample.subs :as subs]
+              [reagent-sample.handlers :as handlers]
               [reagent-sample.storage :as storage]
               [reagent-sample.db :as page-db]
+              [reagent-sample.channels :as channels]
+              [reagent-sample.sync :as sync]
               [reagent-sample.utils :as utils]
               [reagent-sample.page :as page]))
 
@@ -27,23 +29,6 @@
 (extend-type js/NodeList
   ISeqable
     (-seq [array] (array-seq array 0)))
-
-(defonce initial-state {:current-route [:home-page {}]})
-
-(register-sub 
-  :all-pages
-  (fn [db] (reaction (get-in @db [:current-route 1 :pages]))))
-
-(register-sub :current-page
-  (fn [db] (reaction (get-in @db [:current-route 1 :page]))))
-
-(register-sub :linked-with-dropbox?
-   (fn [db] (reaction (get-in @db [:linked-with-dropbox?]))))
-
-(register-handler :initialize
-  (fn [db [_ state]]
-    ; Use initial-state as a default, but keep anything already in db
-    (merge initial-state db (or state {}))))
 
 (defonce img-cache (atom {}))
 
@@ -89,7 +74,7 @@
                      ; Check the img cache to see if we already have a object URL for it
                      (not (get @img-cache path)))
             ; Otherwise, get the corresponding blob out of IndexedDB
-            (let [image (<! (db/load-in "images" "path" path))
+            (let [image (<! (page-db/load-in "images" "path" path))
                   object-url (.createObjectURL js/URL (:contents image))]
                   ; and set it as the img src
               (swap! img-cache assoc path object-url)
@@ -105,17 +90,6 @@
                             page/parse-wiki-links
                             load-images-from-cache)]
     html-contents))
-
-(defn debounce [in ms]
-  (let [out (chan)]
-    (go-loop [last-val nil]
-      (let [val (if (nil? last-val) (<! in) last-val)
-            timer (timeout ms)
-            [new-val ch] (alts! [in timer])]
-        (condp = ch
-          timer (do (>! out val) (recur nil))
-          in (recur new-val))))
-    out))
 
 (defn watch-chan [atom]
   (let [ch (chan)]
@@ -134,9 +108,6 @@
               (filter #(utils/contains-in % ks))
                                         ; Finally, get the value of keys in the atom
               (map #(get-in % ks)))))))
-
-(def page-chan (chan))
-(def page-changes (debounce page-chan 3000))
 
 (defn highlight-code [html-node]
   (let [nodes (.querySelectorAll html-node "pre code")]
@@ -170,28 +141,12 @@
 
 ; Save updated pages to localStorage
 (go-loop []
-  (let [page (<! page-changes)]
+  (let [page (<! channels/page-changes)]
     (page-db/save! page)
     (when (:dirty? page)
       (sync/write! page)
       (dispatch [:assoc-dirty? page false]))
     (recur)))
-
-(defn put-page-chan [page] 
-  (put! page-chan page))
-
-(register-handler :page-edit 
-  ; This vector is middleware. 
-  ; The first one scopes app-db to the :page, so that the handler function below 
-  ; it receives page instead of the full app-db.
-  ; The second one puts the updated page on a chan, where subscribers can
-  ; listen to it. This is used to save to localStorage / sync to dropbox.
-  [(path :current-route 1 :page) (after put-page-chan)]
-  (fn [page [_ contents]]
-    (-> page
-      (assoc-in [:dirty?] true)
-      (assoc-in [:contents] contents)
-      (assoc-in [:timestamp] (js/Date.)))))
 
 (defn page-content-field []
   (let [local-state (atom {})]
@@ -204,6 +159,7 @@
       (fn [this]
         (let [{:keys [on-change contents]} (reagent/props this)
               node (reagent/dom-node this)
+              ;; Adds syntax highlighting for [[Internal Links]]
               token-fn (fn [stream state] 
                         (if-let [match (when (.match stream "[[")
                                         (loop [ch (.next stream)]
@@ -353,51 +309,6 @@
   ;(when (= route-name :wiki-page-view)
     ;(put! page-navigate-chan (:page args))))
 
-; Ugly, but checks whether the currently displayed wiki page is the page
-(defn is-current-page [page [route-name route-args]]
-    (and (= :wiki-page-view route-name) 
-         (= (get-in route-args [:page :title]) (:title page))))
-
-(defn save-page [when-to-save]
-  (let [middleware (if (= :before when-to-save) enrich after)]
-    (middleware (fn [db [_ page]] 
-                  (page-db/save! page)
-                  db))))
-(register-handler
- :assoc-dirty?
- [(save-page :after)]
- (fn [db [_ page dirty?]]
-   (if (is-current-page page (:current-route db))
-     (assoc-in db [:current-route 1 :page :dirty?] dirty?)
-     db)))
-
-; Kind of a weird use of re-frame's handlers but:
-;
-; Here, I use the enrich middleware to *save whichever assoc'd page to localStorage*.
-; I don't update db, because if the user has typed further, they will dirty the page
-; and another sync will be run on its own.
-(register-handler :assoc-page
-  [(save-page :before)]
-  (fn [db [_ page]] db))
-
-(register-handler :pull-notes
-  [ (after #(storage/save! "cursor" (:cursor %)))]
-  (fn [db [_ pull-results]]
-    (assoc db :cursor (:cursor pull-results))))
-
-(register-handler :navigate 
-  ;[(after notify-page-change)]
-  (fn [db [_ route]]
-    (assoc db :current-route route)))
-
-(register-handler
- :linked-with-dropbox
- (fn [db [_ linked-with-dropbox?]]
-   (if linked-with-dropbox?
-     (sync/link)
-     (sync/disconnect))
-   (assoc db :linked-with-dropbox? linked-with-dropbox?)))
-
 (secretary/set-config! :prefix "/")
 
 (secretary/defroute "/" []
@@ -422,6 +333,8 @@
                  maybe-page)
           html-contents (markdown->html (:contents page))
           ;; Preload any internal images, so that they can be synchronously displayed whenever the page re-renders
+          ;; This circumvents a frustrating issue where, when typing, the page content gets continually reloaded
+          ;; and images flash from broken to fixed as they are asynchronously reloaded.
           with-links (<! (load-images html-contents))]
       (dispatch [:navigate [:wiki-page-view {:page page}]]))))
 

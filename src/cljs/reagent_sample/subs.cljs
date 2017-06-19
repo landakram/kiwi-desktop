@@ -4,10 +4,18 @@
 
 (register-sub 
   :all-pages
-  (fn [db] (reaction (get-in @db [:current-route 1 :pages]))))
+  (fn [db] (reaction (get-in @db [:route-state :pages]))))
+
+(register-sub 
+  :permalinks
+  (fn [db] (reaction (get-in @db [:route-state :permalinks]))))
 
 (register-sub :current-page
-  (fn [db] (reaction (get-in @db [:current-route 1 :page]))))
+  (fn [db] (reaction (get-in @db [:route-state :page]))))
 
 (register-sub :linked-with-dropbox?
    (fn [db] (reaction (get-in @db [:linked-with-dropbox?]))))
+
+(register-sub :modal
+              (fn [db _]
+                (reaction (get-in @db [:route-state :modal]))))

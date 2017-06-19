@@ -8,4 +8,4 @@
   :websocket-url "ws://localhost:3449/figwheel-ws"
   :jsload-callback core/render)
 
-(core/init!)
+(core/init)

@@ -50,6 +50,16 @@
         (.then #(put! ch (js->clj % :keywordize-keys true))))
     ch))
 
+(defn load-permalinks []
+  (let [ch (chan)]
+    (println "(load) permalinks")
+    (-> (aget db "pages")
+        (.toCollection)
+        (.keys)
+        (.then (fn [permalinks]
+                 (put! ch (set (js->clj permalinks))))))
+    ch))
+
 
 (defn save! [data]
   (save-in! "pages" data))

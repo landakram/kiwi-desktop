@@ -19,81 +19,47 @@
                  [org.clojure/clojurescript "1.7.122" :scope "provided"]
                  [kibu/pushy "0.3.3"]
                  [re-frame "0.5.0-alpha1"]
+                 [re-com "1.0.0"]
                  [tailrecursion/cljson "1.0.7"]
                  [secretary "1.2.3"]
                  [cljsjs/dexie "1.2.0-1"]
                  [com.andrewmcveigh/cljs-time "0.3.14"]]
 
-  :mirrors {#"clojars" {:name "clojars mirror"
-                        :url "https://clojars-mirror.tcrawley.org/repo/"}}
-
   :plugins [[lein-environ "1.0.1"]
+            [lein-cljsbuild "1.1.3"]
+            [lein-figwheel "0.5.8"]
             [lein-asset-minifier "0.2.2"]]
 
-  :ring {:handler reagent-sample.handler/app
-         :uberwar-name "reagent-sample.war"}
-
   :min-lein-version "2.5.0"
-
-  :uberjar-name "reagent-sample.jar"
-
-  :main reagent-sample.server
 
   :clean-targets ^{:protect false} [:target-path
                                     [:cljsbuild :builds :app :compiler :output-dir]
                                     [:cljsbuild :builds :app :compiler :output-to]]
 
-  :source-paths ["src/clj" "src/cljc"]
+  :source-paths ["src/clj" "src/cljc" "src/cljs"]
 
   :minify-assets
   {:assets
     {"resources/public/css/site.min.css" "resources/public/css/site.css"}}
 
-  :cljsbuild {:builds {:app {:source-paths ["src/cljs" "src/cljc"]
-                             :compiler {:output-to     "resources/public/js/app.js"
-                                        :output-dir    "resources/public/js/out"
-                                        :asset-path   "/js/out"
-                                        :optimizations :none
-                                        :source-map true
-                                        :pretty-print  true}}}}
+  :repl-options {:init-ns reagent-sample.repl
+                 :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
-  :profiles {:dev {:repl-options {:init-ns reagent-sample.repl
-                                  :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+  :cljsbuild {:builds [{:id "dev"
+                        :source-paths ["src/clj" "src/cljs" "src/cljc" "env/dev/cljs"]
+                        :figwheel {:on-jsload "reagent-sample.core/render"}
+                        :compiler {:output-to     "resources/public/js/app.js"
+                                   :output-dir    "resources/public/js/out"
+                                   :asset-path   "/js/out"
+                                   :main reagent-sample.core
+                                   :optimizations :none
+                                   :source-map true
+                                   :pretty-print  true}}]}
 
-                   :dependencies [[ring/ring-mock "0.3.0"]
-                                  [ring/ring-devel "1.4.0"]
-                                  [lein-figwheel "0.5.0-6"]
-                                  [figwheel-sidecar "0.5.0-6"]
-                                  [com.cemerick/piggieback "0.2.1"]
-                                  [org.clojure/tools.nrepl "0.2.11"]
-                                  [pjstadig/humane-test-output "0.7.0"]]
+  :figwheel {:css-dirs ["resources/public/css"]
+             :ring-handler reagent-sample.handler/app}
 
-                   :source-paths ["env/dev/clj"]
-                   :plugins [[lein-figwheel "0.5.0-6"]
-                             [lein-cljsbuild "1.0.6"]]
-
-                   :injections [(require 'pjstadig.humane-test-output)
-                                (pjstadig.humane-test-output/activate!)]
-
-                   :figwheel {:http-server-root "public"
-                              :server-port 3449
-                              :nrepl-port 7002
-                              :css-dirs ["resources/public/css"]
-                              :ring-handler reagent-sample.handler/app}
-
-                   :env {:dev true}
-
-                   :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]
-                                              :compiler {:main "reagent-sample.dev"
-                                                         :source-map true}}}}}
-
-             :uberjar {:hooks [leiningen.cljsbuild minify-assets.plugin/hooks]
-                       :env {:production true}
-                       :aot :all
-                       :omit-source true
-                       :cljsbuild {:jar true
-                                   :builds {:app
-                                             {:source-paths ["env/prod/cljs"]
-                                              :compiler
-                                              {:optimizations :advanced
-                                               :pretty-print false}}}}}})
+  :profiles {:dev {:dependencies [[figwheel-sidecar "0.5.0-6"]
+                                  [com.cemerick/piggieback "0.2.1"]]
+                   :source-paths ["src/clj" "src/cljs" "src/cljc" "env/dev/cljs"]
+                   :env {:dev true}}})

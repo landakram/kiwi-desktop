@@ -10,7 +10,8 @@
               [reagent-sample.db :as db]
               [cljs.core.async :as async :refer [timeout chan put! <! pub sub]]))
 
-(defonce dropbox-key "***REMOVED***")
+;; (defonce dropbox-key "***REMOVED***")
+(defonce dropbox-key "1e4hlala0zaoktp")
 (defonce client (dropbox/create-client dropbox-key))
 
 (defprotocol IError

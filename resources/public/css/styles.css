@@ -6,8 +6,9 @@ body {
     margin: 0;
     padding: 0;
     background: #f6f6f6;
-    font-family: 'source-sans-pro', Helvetica, Arial, sans-serif;
-    font-size: 1.1em;
+    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+    font-size: 16px;
+    /* font-size: 1.1em; */
     line-height: 1.5em;
     color: #444;
     -webkit-font-smoothing: antialiased;
@@ -33,7 +34,7 @@ a:hover {
 
 h1 {
     font-weight: 900;
-    font-size: 2em;
+    /* font-size: 2em; */
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -50,12 +51,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .content-wrapper {
-  margin: 0em auto;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  flex-direction: row;
-  margin-bottom: 5em;
+    margin: 0em auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    flex-direction: row;
+    margin-bottom: 5em;
 
 }
 
@@ -74,8 +75,8 @@ h1, h2, h3, h4, h5, h6 {
     -moz-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.125);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.125);
 
-  min-width: 20em;
-  max-width: 720px;
+    min-width: 20em;
+    max-width: 720px;
 }
 
 .header {
@@ -86,8 +87,12 @@ h1, h2, h3, h4, h5, h6 {
     justify-content: space-between;
     align-items: center;
     color: rgba(68, 68, 68, 0.8);
-    text-shadow: 1px 1px 2px #fff, 0 0 0 #000, 1px 1px 2px #fff;
 }
+
+.header a {
+    color: #5CB91C;
+}
+
 .logo a {
     color: #444;
     text-decoration: none;
@@ -107,13 +112,6 @@ h1, h2, h3, h4, h5, h6 {
     margin: auto;
     margin-left: 0.5em;
 }
-.navigation a {
-}
-
-.navigation a:link    { color: #4A60D6 }  /* unvisited links */
-.navigation a:visited { color: #4A60D6 }  /* visited links   */
-.navigation a:hover   { color: #4A60D6 }  /* user hovers     */
-
 article {
 }
 article img {
@@ -125,8 +123,6 @@ article img {
 }
 
 pre {
-    font-size: 1.1em;
-
     overflow: scroll;
 
     -webkit-border-radius: 5px;
@@ -197,20 +193,20 @@ img.emoji {
 }
 
 #page a.internal {
-  text-decoration: none;
-  padding: 2px 3px;
-  font-family: Monaco, Andale Mono, Courier New, monospace;
-  font-size: 0.75em;
-  -webkit-border-radius: 3px;
-  -moz-border-radius: 3px;
-  border-radius: 3px;
-  border: 1px solid #b1edfc;
-  background: #ccf4fe;
-  color: #666;
+    text-decoration: none;
+    padding: 2px 3px;
+    font-family: Monaco, Andale Mono, Courier New, monospace;
+    font-size: 0.75em;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+    border: 1px solid #b1edfc;
+    background: #ccf4fe;
+    color: #666;
 }
 #page a.internal.new {
-  background: #fecccc;
-  border: 1px solid #fcb1b1;
+    background: #fecccc;
+    border: 1px solid #fcb1b1;
 }
 .page-list {
     padding-left: 0;
@@ -239,4 +235,78 @@ img.emoji {
 .task-list {
     list-style: none;
     padding-left: 0;
+}
+
+.btn-default {
+    border: 1px solid #5CB91C;
+    color: #5CB91C;
+    background: rgba(0,0,0,0.0);
+    outline: none;
+}
+
+.btn-default:focus {
+    border: 1px solid #5CB91C;
+    color: #5CB91C;
+    background: rgba(0,0,0,0.0);
+    outline: none;
+}
+.btn-default:hover{
+    border: 1px solid #5CB91C;
+    background-color: #5CB91C;
+    color: white;
+    cursor: pointer;
+}
+.btn-default:active {
+    border: 1px solid #5CB91C;
+    background-color: #5CB91C;
+    color: white;
+    cursor: pointer;
+    outline: none;
+}
+
+.btn-default:active:hover {
+    border: 1px solid #5CB91C;
+    background-color: #5CB91C;
+    color: white;
+    cursor: pointer;
+    outline: none;
+}
+
+.btn-danger {
+  border: 1px solid #d9534f;
+    color: #d9534f;
+    background: rgba(0,0,0,0.0);
+    outline: none;
+}
+
+.btn-danger:focus {
+  border: 1px solid #d9534f;
+  color: #d9534f;
+    background: rgba(0,0,0,0.0);
+    outline: none;
+}
+.btn-danger:hover{
+    border: 1px solid #d9534f;
+  background-color: #d9534f;
+    color: white;
+    cursor: pointer;
+}
+.btn-danger:active {
+    border: 1px solid #d9534f;
+  background-color: #d9534f;
+    color: white;
+    cursor: pointer;
+    outline: none;
+}
+
+.btn-danger:active:hover {
+    border: 1px solid #d9534f;
+  background-color: #d9534f;
+    color: white;
+    cursor: pointer;
+    outline: none;
+}
+
+.modal {
+    display: block;
 }

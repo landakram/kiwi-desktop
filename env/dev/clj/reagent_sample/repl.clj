@@ -40,15 +40,7 @@
                               :ring-handler reagent-sample.handler/app}
    :build-ids ["dev"]
    :all-builds
-   [{:id "dev"
-     :source-paths ["src/clj" "src/cljs" "src/cljc" "env/dev/cljs"]
-     :compiler {:output-to     "resources/public/js/app.js"
-                :output-dir    "resources/public/js/out"
-                :asset-path   "/js/out"
-                :main "reagent-sample.dev"
-                :optimizations :none
-                :source-map true
-                :pretty-print  true}}]})
+   []})
 
 (defn start []
   (repl-api/start-figwheel! figwheel-config))

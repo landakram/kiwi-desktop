@@ -1,7 +1,10 @@
 (ns reagent-sample.utils
   (:require [cljs.core.async :refer [chan <! pipe]]))
 
-(defn contains [string substring] 
+
+(defn contains
+  "Returns true if substring is contained within string" 
+  [string substring]
   (not= -1 (.indexOf string substring)))
 
 (defn contains-in [obj ks]

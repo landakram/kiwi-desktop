@@ -1,5 +1,6 @@
 (ns reagent-sample.page
-  (:require [clojure.string :as string]))
+  (:require [clojure.string :as string]
+            [reagent-sample.utils :as utils]))
 
 (defn capitalize-words [s]
   (->> (string/split (str s) #"\b")
@@ -17,18 +18,37 @@
 (defn get-permalink [page]
   (:permalink page))
 
-(defn parse-wiki-links [html-content]
-  (string/replace html-content #"\[\[(.+?)\]\]"
-    (fn [[_ page-title]]
-      (str "<a class=\"internal\" href=\"/page/"
-           (get-permalink-from-title page-title)
-           "\">"
-           page-title
-           "</a>"))))
+(defn- parse-alias-link [page-title]
+  (let [[name alias] (string/split page-title #":")]
+    [alias name]))
 
-(defn markdown->html [page]
-  (let [content (:contents page)]
-    (-> content str js/marked parse-wiki-links)))
+(defn- alias? [page-title]
+  (utils/contains page-title ":"))
+
+(defn parse-page-title [page-title]
+  (if (alias? page-title)
+    (parse-alias-link page-title)
+    [page-title page-title]))
+
+(defn- construct-classes [name permalinks]
+  (if (contains? permalinks name)
+    ["internal"]
+    ["internal" "new"]))
+
+(defn parse-wiki-links [html-content permalinks]
+  (string/replace
+   html-content
+   #"\[\[(.+?)\]\]"
+   (fn [[_ page-title]]
+     (let [[name display-name] (parse-page-title page-title)
+           permalink (get-permalink-from-title name)
+           classes (string/join " " (construct-classes permalink permalinks))]
+       (str "<a class=\" " classes "\" href=\"/page/"
+            permalink
+            "\">"
+            display-name
+            "</a>")))))
+
 
 (defn new-page [permalink]
   {:title (get-title-from-permalink permalink)
@@ -38,7 +58,5 @@
    :dirty? true})
 
 ; Ugly, but checks whether the currently displayed wiki page is the page
-(defn is-current-page [page [route-name route-args]]
-    (and (= :wiki-page-view route-name) 
-         (= (get-in route-args [:page :title]) (:title page))))
+
 

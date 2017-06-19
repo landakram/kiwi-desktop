@@ -68,3 +68,7 @@
 (defn write [client path text ch]
   (println "(write)" path)
   (.writeFile client path text (->chan ch)))
+
+(defn delete [client path ch]
+  (println "(delete)" path)
+  (.delete client path (->chan ch)))

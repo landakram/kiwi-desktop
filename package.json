@@ -1,0 +1,8 @@
+{
+  "name": "Kiwi",
+  "version": "0.0.1",
+  "main": "resources/main.js",
+  "devDependencies": {
+    "electron-prebuilt": "^1.4.13"
+  }
+}

@@ -2,7 +2,7 @@
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
+            :url  "http://www.eclipse.org/legal/epl-v10.html"}
 
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [ring-server "0.4.0"]
@@ -40,26 +40,34 @@
 
   :minify-assets
   {:assets
-    {"resources/public/css/site.min.css" "resources/public/css/site.css"}}
+   {"resources/public/css/site.min.css" "resources/public/css/site.css"}}
 
-  :repl-options {:init-ns reagent-sample.repl
+  :repl-options {:init-ns          reagent-sample.repl
                  :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
-  :cljsbuild {:builds [{:id "dev"
-                        :source-paths ["src/clj" "src/cljs" "src/cljc" "env/dev/cljs"]
-                        :figwheel {:on-jsload "reagent-sample.core/render"}
-                        :compiler {:output-to     "resources/public/js/app.js"
-                                   :output-dir    "resources/public/js/out"
-                                   :asset-path   "/js/out"
-                                   :main reagent-sample.core
-                                   :optimizations :none
-                                   :source-map true
-                                   :pretty-print  true}}]}
+  :cljsbuild {:builds [{:id           "dev"
+                        :source-paths ["src/clj" "src/cljs/reagent_sample" "src/cljc" "env/dev/cljs"]
+                        :figwheel     {:on-jsload "reagent-sample.core/render"}
+                        :compiler     {:output-to     "resources/public/js/app.js"
+                                       :output-dir    "resources/public/js/out"
+                                       :asset-path    "js/out"
+                                       :main          reagent-sample.core
+                                       :optimizations :none
+                                       :source-map    true
+                                       :pretty-print  true}}
+                       {:id "electron-dev"
+                        :source-paths ["src/cljs/electron"]
+                        :compiler {:output-to "resources/main.js"
+                                   :output-dir "resources/public/js/electron-dev"
+                                   :optimizations :simple
+                                   :pretty-print true
+                                   :cache-analysis true}}]}
 
-  :figwheel {:css-dirs ["resources/public/css"]
-             :ring-handler reagent-sample.handler/app}
+  :figwheel {:http-server-root "public"
+             :css-dirs         ["resources/public/css"]
+             :server-port      3449}
 
   :profiles {:dev {:dependencies [[figwheel-sidecar "0.5.0-6"]
                                   [com.cemerick/piggieback "0.2.1"]]
                    :source-paths ["src/clj" "src/cljs" "src/cljc" "env/dev/cljs"]
-                   :env {:dev true}}})
+                   :env          {:dev true}}})

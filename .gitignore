@@ -13,3 +13,6 @@ pom.xml.asc
 /.repl
 *.log
 /.env
+*.un~
+resources/main.js
+node_modules

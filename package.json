@@ -4,5 +4,8 @@
   "main": "resources/main.js",
   "devDependencies": {
     "electron-prebuilt": "^1.4.13"
+  },
+  "dependencies": {
+    "open": "0.0.5"
   }
 }

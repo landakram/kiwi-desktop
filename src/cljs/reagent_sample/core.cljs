@@ -35,12 +35,21 @@
 ;; -------------------------
 ;; Views
 
+(def electron (js/require "electron"))
+(def shell (.-shell electron))
+(def remote (.-remote electron))
+(def dialog (.-dialog remote))
 
 (extend-type js/NodeList
   ISeqable
     (-seq [array] (array-seq array 0)))
 
 (defonce img-cache (atom {}))
+
+(defn path->filename [path]
+  (-> path
+      (string/split "/")
+      last))
 
 (defn create-dummy-node [html-contents]
   (let [el (.createElement js/document "div")]

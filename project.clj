@@ -23,7 +23,8 @@
                  [tailrecursion/cljson "1.0.7"]
                  [secretary "1.2.3"]
                  [cljsjs/dexie "1.2.0-1"]
-                 [com.andrewmcveigh/cljs-time "0.3.14"]]
+                 [com.andrewmcveigh/cljs-time "0.3.14"]
+                 [binaryage/devtools "0.9.4"]]
 
   :plugins [[lein-environ "1.0.1"]
             [lein-cljsbuild "1.1.3"]
@@ -51,6 +52,7 @@
                         :compiler     {:output-to     "resources/public/js/app.js"
                                        :output-dir    "resources/public/js/out"
                                        :asset-path    "js/out"
+                                       :preloads '[devtools.preload]
                                        :main          reagent-sample.core
                                        :optimizations :none
                                        :source-map    true

@@ -18,6 +18,10 @@
 (defn get-permalink [page]
   (:permalink page))
 
+(defn title [page]
+  (-> (get-permalink page)
+      (get-title-from-permalink)))
+
 (defn- parse-alias-link [page-title]
   (let [[name alias] (string/split page-title #":")]
     [alias name]))

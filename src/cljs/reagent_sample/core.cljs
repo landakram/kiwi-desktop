@@ -40,6 +40,13 @@
 (def shell (.-shell electron))
 (def remote (.-remote electron))
 (def dialog (.-dialog remote))
+(def lunr (js/require "lunr"))
+(set! (.-lunr js/window) lunr)
+
+(def Markdown (js/require "markdown-it"))
+(def markdown-renderer (Markdown.))
+(.use markdown-renderer (js/require "markdown-it-task-lists"))
+(set! (.-markdown js/window) markdown-renderer)
 
 (extend-type js/NodeList
   ISeqable
@@ -404,10 +411,7 @@
 
 (defn home-page []
   [base-layout
-   [:article#page 
-    [:h1.post-title "Welcome to Kiwi"]
-    [:p "Personal wiki"]
-    [:a.internal {:href "/page/home"} "See your home page"]]])
+   [:article#page]])
 
 (defn about-page []
   [:div [:h1 "This is an about page"]

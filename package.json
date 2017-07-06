@@ -6,6 +6,8 @@
     "electron-prebuilt": "^1.4.13"
   },
   "dependencies": {
+    "markdown-it": "^8.3.1",
+    "markdown-it-task-lists": "^2.0.1",
     "open": "0.0.5"
   }
 }

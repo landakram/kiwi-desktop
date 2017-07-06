@@ -70,6 +70,10 @@
      db)))
 
 
+(register-handler
+ :assoc-editing?
+ (fn [db [_ editing?]]
+   (assoc-in db [:route-state :editing?] editing?)))
 
 ; Kind of a weird use of re-frame's handlers but:
 ;

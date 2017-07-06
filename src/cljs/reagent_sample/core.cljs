@@ -261,7 +261,7 @@
 
 (defn edit-button [editing]
   [:button.edit-button.btn.btn-default
-   {:on-click #(swap! editing not)} 
+   {:on-click (fn [] (dispatch [:assoc-editing?  (not @editing)]))} 
    (if-not @editing
      [:i.fa.fa-pencil]
      [:i.fa.fa-check])
@@ -277,6 +277,7 @@
   [re-com/modal-panel
    :child content
    :backdrop-on-click #(dispatch [:hide-modal])])
+
 
 
 (defn add-page-form
@@ -318,9 +319,35 @@
   [modal 
    [add-page-form]])
 
+(defn delete-page-modal []
+  (let [page (subscribe [:current-page])]
+    (fn []
+      [modal
+       [re-com/v-box
+        :gap "10px"
+        :width "400px"
+        :children [[:h3 "Are you sure?"]
+                   [:p "You are about to delete " [:b (page/title @page)] "."]
+                   [re-com/h-box
+                    :children [[re-com/button
+                                :label "Cancel"
+                                :class "btn-default"
+                                :style {:margin-right "10px"}
+                                :on-click #(re-frame/dispatch [:hide-modal])]
+                               [re-com/button
+                                :label "Delete it"
+                                :class "btn-danger"
+                                :on-click (fn [_]
+                                            (go
+                                              (let [deleted (<! (page-db/delete! @page))]
+                                                (when (= deleted :deleted)
+                                                  (re-frame/dispatch [:assoc-editing? false])
+                                                  (re-frame/dispatch [:hide-modal])
+                                                  (.back js/window.history)))))]]]]]])))
 
 (defmulti modals identity)
 (defmethod modals :add-page [] [add-page-modal])
+(defmethod modals :delete-page [] [delete-page-modal])
 
 (defn base-layout [content]
   (let [modal (subscribe [:modal])]
@@ -333,14 +360,22 @@
        (when @modal
          (modals @modal))])))
 
-(defn wiki-page-contents [page permalinks]
-  (let [editing (reagent/atom false)]
+(defn delete-button [page editing]
+  (fn [page]
+    [:button.btn.btn-danger {:on-click
+                             (fn [e]
+                               (dispatch [:show-modal :delete-page]))}
+     [:i.fa.fa-trash]
+     " Delete"]))
+
+(defn wiki-page-contents [page]
+  (let [editing (subscribe [:editing?])]
     (fn [page]
       (let [{:keys [title contents]} @page] 
         [:div
          [:div.btn-group.pull-right
           (when @editing
-            [:button.btn.btn-danger [:i.fa.fa-trash] " Delete"])
+            [delete-button page editing])
           [edit-button editing]]
           (if-not @editing
             [:article#page

@@ -10,6 +10,10 @@
   :permalinks
   (fn [db] (reaction (get-in @db [:route-state :permalinks]))))
 
+(register-sub
+ :editing?
+ (fn [db] (reaction (get-in @db [:route-state :editing?]))))
+
 (register-sub :current-page
   (fn [db] (reaction (get-in @db [:route-state :page]))))
 

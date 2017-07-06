@@ -115,7 +115,6 @@
  :create-page
  (fn [db [_ page-title]]
    (let [permalink (page/get-permalink-from-title page-title)]
-     (pushy/set-token! history 
-                       (str "/page/" permalink))
+     (set-hash! (str "/page/" permalink))
      (print db)
      db)))

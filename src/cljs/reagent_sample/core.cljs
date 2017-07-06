@@ -18,7 +18,7 @@
               [goog.events :as events]
               [pushy.core :as pushy]
               [clojure.string :as string]
-              [goog.history.EventType :as EventType]
+              [goog.history.EventType :as HistoryEventType]
               [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
               [cljs.core.async :refer [chan <! put! pipe timeout]]
               [cljs-time.format :as f]
@@ -30,7 +30,8 @@
               [reagent-sample.channels :as channels]
               [reagent-sample.utils :as utils]
               [reagent-sample.history :refer [ history]]
-              [reagent-sample.page :as page]))
+              [reagent-sample.page :as page])
+    (:import goog.History))
 
 ;; -------------------------
 ;; Views
@@ -116,15 +117,56 @@
           (.highlightBlock js/hljs item))
         (recur (dec i))))))
 
+(secretary/set-config! :prefix "#")
 
-(defn markdown-content [content permalinks]
-  [(with-meta
-     (fn [] [:div {:dangerouslySetInnerHTML
-                   {:__html (markdown->html content permalinks)}}])
-     {:component-did-mount
-      (fn [this]
-        (let [node (reagent/dom-node this)]
-          (highlight-code node)))})])
+(secretary/defroute index-route "/" []
+  (dispatch [:navigate [:home-page]]))
+
+(secretary/defroute settings-route "/settings" []
+  (dispatch [:navigate [:settings-page]]))
+
+(secretary/defroute search-route "/search" []
+  (go
+    (let [pages (<! (page-db/load-all!))]
+      (dispatch [:navigate [:search-page]
+                 {:pages pages
+                  :filter ""}]))))
+
+(secretary/defroute about-route "/about" []
+  (dispatch [:navigate [:about-page]]))
+
+(secretary/defroute page-route "/page/:permalink" [permalink]
+  (go
+    (let [maybe-page (<! (page-db/load permalink))
+          page (if (= maybe-page :not-found) 
+                 (page/new-page permalink) 
+                 maybe-page)
+          permalinks (<! (page-db/load-permalinks))]
+      (dispatch [:navigate [:wiki-page-view permalink]
+                 {:page page :permalinks permalinks :editing? false}]))))
+
+
+(defn markdown-content [content]
+  (let [wiki-root-dir (subscribe [:wiki-root-dir])
+        permalinks (subscribe [:permalinks])]
+    (reagent/create-class
+      {:reagent-render 
+       (fn [content]
+         [:div
+          {:dangerouslySetInnerHTML
+           {:__html (markdown->html @wiki-root-dir content @permalinks)}}])
+       :component-did-update
+       (fn [this]
+         (let [node (reagent/dom-node this)]
+           (js/window.renderMath)
+           (rewrite-internal-links @permalinks node)
+           (highlight-code node)))
+       :component-did-mount
+       (fn [this]
+         (let [node (reagent/dom-node this)]
+           (js/window.renderMath)
+           (rewrite-internal-links @permalinks node)
+           (highlight-code node)))})))
 
 
 (defn page-title-field [page]
@@ -156,7 +198,6 @@
                                         (loop [ch (.next stream)]
                                           (if (and (= ch "]") (= (.next stream) "]"))
                                             (do (.eat stream "]")
-                                                (println "found link")
                                                 "internal-link")
                                             (when-not (nil? ch) (recur (.next stream))))))]
                           match
@@ -201,11 +242,11 @@
 
 (defn layout-header []
   [:div.header
-   [:div [:a.btn.btn-default {:href "/page/home"} [:i.fa.fa-home] " Home"]]
+   [:div [:a.btn.btn-default {:href (page-route {:permalink "home"})} [:i.fa.fa-home] " Home"]]
    [:nav.navigation
     [:div.btn-group
-     [:a.btn.btn-default {:href "/settings"} [:i.fa.fa-cog] " Settings"]
-     [:a.btn.btn-default {:href "/search"} [:i.fa.fa-search] " Search"]
+     [:a.btn.btn-default {:href (settings-route)} [:i.fa.fa-cog] " Settings"]
+     [:a.btn.btn-default {:href (search-route)} [:i.fa.fa-search] " Search"]
      [:button.btn.btn-default
       {:on-click #(dispatch [:show-modal :add-page])}
       [:i.fa.fa-plus] " New page"]
@@ -297,7 +338,7 @@
           (if-not @editing
             [:article#page
              [:h1.post-title title]
-             [:article (markdown-content contents permalinks)]]
+             [:article [markdown-content contents]]]
             [editor {:page page :editing @editing}])]))))
 
 (defn wiki-page []
@@ -342,7 +383,7 @@
         permalink (:permalink page)
         date-format (f/formatter "MMMM d, yyyy")
         date (f/unparse date-format (coerce/from-date (:timestamp page)))
-        path (str "/page/" permalink)]
+        path (str "#/page/" permalink)]
     [:li
      [:div.row 
       [:div.col-xs
@@ -375,52 +416,8 @@
 ;; -------------------------
 ;; Routes
 (register-sub :current-route 
-  (fn [db] 
-    (reaction (get-in @db [:current-route]))))
-
-;(def page-navigate-chan (chan))
-
-;(defn notify-page-change [{[route-name args] :current-route} db]
-  ;(when (= route-name :wiki-page-view)
-    ;(put! page-navigate-chan (:page args))))
-
-(secretary/set-config! :prefix "/")
-
-(secretary/defroute "/" []
-  (dispatch [:navigate [:home-page]]))
-
-(secretary/defroute "/settings" []
-  (dispatch [:navigate [:settings-page]]))
-
-(secretary/defroute "/search" []
-  (go
-    (let [pages (<! (page-db/load-all!))]
-      (dispatch [:navigate [:search-page]
-                 {:pages pages}]))))
-
-(secretary/defroute "/about" []
-  (dispatch [:navigate [:about-page]]))
-
-(secretary/defroute "/page/:page-permalink" [page-permalink]
-  (go
-    (let [maybe-page (<! (page-db/load page-permalink))
-          page (if (= maybe-page :not-found) 
-                 (page/new-page page-permalink) 
-                 maybe-page)
-          permalinks (<! (page-db/load-permalinks))
-          html-contents (markdown->html (:contents page) permalinks)
-          ;; Preload any internal images, so that they can be synchronously displayed whenever the page re-renders
-          ;; This circumvents a frustrating issue where, when typing, the page content gets continually reloaded
-          ;; and images flash from broken to fixed as they are asynchronously reloaded.
-          with-links (<! (load-images html-contents))]
-      (dispatch [:navigate [:wiki-page-view page-permalink]
-                 {:page page :permalinks permalinks}]))))
-
-;; -------------------------
-;; History
-;; must be called after routes have been defined
-;; -------------------------
-;; Initialize app
+              (fn [db] 
+                (reaction (get-in @db [:current-route]))))
 
 (defmulti page
   (fn [name _]
@@ -446,27 +443,21 @@
     (apply page @current-route)))
 
 (defn render [] 
-  (print "render")
   (reagent/render [app] (.getElementById js/document "app")))
+
+(defn hook-browser-navigation! []
+  (doto (History.)
+        (events/listen
+          HistoryEventType/NAVIGATE
+          (fn [event]
+              (secretary/dispatch! (.-token event))))
+        (.setEnabled true)))
 
 (defn ^:export init []
   (enable-console-print!)
-  (print "init")
-  (go
-    (let [cursor (storage/load "cursor")
-          linked-with-dropbox? (storage/load "linked-with-dropbox")]
-      (dispatch-sync [:initialize {:cursor cursor
-                                   :linked-with-dropbox? linked-with-dropbox?}])
-
-      (pushy/start! history)
-      (render)
-
-      (when (<! (sync/connect))
-        (swap! app-db assoc :linked-with-dropbox? true)
-
-        (sync/start-polling (:cursor @app-db))))))
-
-;(swap! app-db update-in [:current-route 1 :pages] conj {:timestamp (js/Date.) :permalink "Test" :title "Test"})
-
-;; (print app-db)
-
+  (hook-browser-navigation!)
+  (let [wiki-root-dir (storage/load "wiki-root-dir")]
+    (dispatch-sync [:initialize {:wiki-root-dir wiki-root-dir}]) 
+    (when (not (nil? wiki-root-dir))
+      (secretary/dispatch! (page-route {:permalink "home"})))
+    (render)))

@@ -31,7 +31,7 @@
     [page-title page-title]))
 
 (defn- construct-classes [name permalinks]
-  (if (contains? permalinks name)
+  (if (utils/in? permalinks name)
     ["internal"]
     ["internal" "new"]))
 
@@ -43,8 +43,8 @@
      (let [[name display-name] (parse-page-title page-title)
            permalink (get-permalink-from-title name)
            classes (string/join " " (construct-classes permalink permalinks))]
-       (str "<a class=\" " classes "\" href=\"/page/"
-            permalink
+       (str "<a class=\" " classes "\" href=\""
+            "#" "/page/" permalink
             "\">"
             display-name
             "</a>")))))

@@ -1,6 +1,14 @@
 (ns reagent-sample.utils
   (:require [cljs.core.async :refer [chan <! pipe]]))
 
+(defn in? 
+  "true if coll contains elm"
+  [coll elm]  
+  (some #(= elm %) coll))
+
+(defn starts-with
+  [string substring]
+  (.startsWith string substring))
 
 (defn contains
   "Returns true if substring is contained within string" 

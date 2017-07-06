@@ -4,13 +4,15 @@
             [reagent-sample.db :as page-db]
             [reagent-sample.storage :as storage]
             [reagent-sample.page :as page]
-            [reagent-sample.sync :as sync]
             [secretary.core :as secretary]
             [pushy.core :as pushy]
             [reagent-sample.history :refer [history]]))
 
 (defonce initial-state {:current-route [:home-page]
                         :route-state {}})
+
+(defn set-page-db-wiki-dir! [db]
+  (page-db/set-wiki-dir! (:wiki-root-dir db)))
 
 (defn- set-hash!
   "Set the browser's location hash."
@@ -19,6 +21,7 @@
 
 
 (register-handler :initialize
+  [(after set-page-db-wiki-dir!)]
   (fn [db [_ state]]
     ; Use initial-state as a default, but keep anything already in db
     (merge initial-state db (or state {}))))
@@ -100,6 +103,12 @@
      (sync/link)
      (sync/disconnect))
    (assoc db :linked-with-dropbox? linked-with-dropbox?)))
+(register-handler
+ :assoc-wiki-root-dir
+ [(after #(storage/save! "wiki-root-dir" (:wiki-root-dir %)))
+  (after set-page-db-wiki-dir!)]
+ (fn [db [_ wiki-root-dir]]
+   (assoc db :wiki-root-dir wiki-root-dir)))
 
 
 (register-handler

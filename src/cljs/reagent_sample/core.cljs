@@ -28,7 +28,6 @@
               [reagent-sample.storage :as storage]
               [reagent-sample.db :as page-db]
               [reagent-sample.channels :as channels]
-              [reagent-sample.sync :as sync]
               [reagent-sample.utils :as utils]
               [reagent-sample.history :refer [ history]]
               [reagent-sample.page :as page]))
@@ -48,58 +47,55 @@
     (set! (.-innerHTML el) html-contents)
     el))
 
-(defn img-tag->path [img-tag]
+(defn img-tag->path [root-dir img-tag]
   (let [src (string/lower-case (.-src img-tag))
-        filename (sync/path->filename src)
-        path (str "img/" filename)]
+        filename (path->filename src)
+        path (str root-dir "/" page-db/img-rel-path filename)]
     path))
 
 (defn is-local-img [src]
-  (utils/contains src (.-hostname js/window.location)))
+  (.startsWith src "file://"))
 
-(defn load-images-from-cache [html-contents]
+(defn rewrite-image-paths [root-dir html-contents]
+  "Rewrite relative image paths like 'img/foo.jpg' to {root-dir}/public/img/foo.jpg"
   (let [el (create-dummy-node html-contents)
         img-nodes (.querySelectorAll el "img")]
         (doseq [img img-nodes]
           (let [src (.-src img)
-                path (img-tag->path img)]
+                path (img-tag->path root-dir img)]
             ; If the image is a local one
             ; Check the img cache to see if we already have a object URL for it
-            (when (and (is-local-img src)
-                       (not (utils/contains src "blob:")))
-              (when-let [cached-src (get @img-cache path)]
-                (set! (.-src img) cached-src)))))
+            (when (is-local-img src)
+              (set! (.-src img) path))))
         (.-innerHTML el)))
 
-(defn load-images [html-contents]
-  (let [ch (chan)
-        el (create-dummy-node html-contents)
-        img-nodes (.querySelectorAll el "img")]
-    (go
-      (doseq [img img-nodes]
-        (let [src (.-src img)
-              path (img-tag->path img)]
-          ; If the image is a local one
-          (when (and (is-local-img src)
-                     (not (utils/contains src "blob:"))
-                     ; Check the img cache to see if we already have a object URL for it
-                     (not (get @img-cache path)))
-            ; Otherwise, get the corresponding blob out of IndexedDB
-            (let [image (<! (page-db/load-in "images" "path" path))
-                  object-url (.createObjectURL js/URL (:contents image))]
-                  ; and set it as the img src
-              (swap! img-cache assoc path object-url)
-              (set! (.-src img) object-url)))))
-      (put! ch (.-innerHTML el)))
-    ch))
+(defn rewrite-external-links [html-contents]
+  "Rewrite external links to open in a new window. Electron is set up to open these in the default browser."
+  (let [el (create-dummy-node html-contents)
+        links (.querySelectorAll el "a:not(.internal)")]
+    (doseq [link links]
+      (let [href (.-href link)]
+        (set! (.-target link) "_blank")))
+    (.-innerHTML el)))
 
+(defn rewrite-internal-links [permalinks html-node]
+  (let [nodes (.querySelectorAll html-node "a.internal")]
+    (doseq [node nodes]
+      (let [page-name (.-innerHTML node)
+            permalink (page/get-permalink-from-title page-name)
+            classes (page/construct-classes permalink permalinks)
+            class-str (string/join " " classes)]
+        (set! (.-class node) class-str)))
+    nodes)
+  )
 
-(defn markdown->html [markdown permalinks]
-    (let [html-contents (-> markdown
+(defn markdown->html [wiki-root-dir markdown permalinks]
+    (let [html-contents (->> markdown
                             str
-                            js/marked
-                            ( #( page/parse-wiki-links % permalinks))
-                            load-images-from-cache)]
+                            (.render markdown-renderer)
+                            (#(page/parse-wiki-links % permalinks))
+                            (rewrite-image-paths wiki-root-dir)
+                            (rewrite-external-links))]
     html-contents))
 
 
@@ -130,11 +126,9 @@
 ; Save updated pages to localStorage
 (go-loop []
   (let [page (<! channels/page-changes)]
-    (page-db/save! page)
-    (when (:dirty? page)
-      (sync/write! page)
-      (dispatch [:assoc-dirty? page false]))
-    (recur)))
+    (when page
+      (page-db/save! page)
+      (recur))))
 
 (defn page-content-field []
   (let [local-state (atom {})]
@@ -298,26 +292,36 @@
             [editor {:page page :editing @editing}])]))))
 
 (defn wiki-page []
-  (let [page (subscribe [:current-page])
-        permalinks (subscribe [:permalinks])]
-    (fn []
-      [base-layout
-       [wiki-page-contents page @permalinks]])))
+  (let [page (subscribe [:current-page])]
+    (reagent/create-class
+     {:reagent-render 
+      (fn []
+        [base-layout
+         [wiki-page-contents page]])})))
 
-(defn link-dropbox-button [linked-with-dropbox?]
-  [:button.btn.btn-default
-           {:on-click #(dispatch [:linked-with-dropbox (not @linked-with-dropbox?)])}
-           (if @linked-with-dropbox? "Unlink Dropbox" "Link with Dropbox")])
+
+(defn set-wiki-root-button []
+  (let [on-directory-chosen
+        (fn [directories]
+          (when (seq directories)
+            (dispatch [:assoc-wiki-root-dir (first (js->clj directories))])))]
+    [:button.btn.btn-default
+     {:on-click (fn [_]
+                  (.showOpenDialog dialog
+                                   (clj->js {:properties ["openDirectory"]})
+                                   on-directory-chosen))}
+     "Set wiki location"]))
 
 (defn settings-page []
-  (let [linked-with-dropbox? (subscribe [:linked-with-dropbox?])]
+  (let [wiki-root-dir (subscribe [:wiki-root-dir])]
     (fn []
       [base-layout
        [:article#page
         [:h1.post-title "Settings"]
-        [:p "These are your settings."]
-        [:h2 "Sync"]
-        [link-dropbox-button linked-with-dropbox?]]])))
+        [:h2 "Wiki location"]
+        (when (not (nil? @wiki-root-dir))
+          [:p [ :code @wiki-root-dir]])
+        [set-wiki-root-button]]])))
 
 
 (defn page-list-item [page]

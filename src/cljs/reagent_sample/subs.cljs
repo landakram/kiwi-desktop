@@ -13,8 +13,8 @@
 (register-sub :current-page
   (fn [db] (reaction (get-in @db [:route-state :page]))))
 
-(register-sub :linked-with-dropbox?
-   (fn [db] (reaction (get-in @db [:linked-with-dropbox?]))))
+(register-sub :wiki-root-dir
+   (fn [db] (reaction (get-in @db [:wiki-root-dir]))))
 
 (register-sub :modal
               (fn [db _]

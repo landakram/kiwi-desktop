@@ -101,12 +101,11 @@
         (assoc :route-state (or route-state {})))))
 
 (register-handler
- :linked-with-dropbox
- (fn [db [_ linked-with-dropbox?]]
-   (if linked-with-dropbox?
-     (sync/link)
-     (sync/disconnect))
-   (assoc db :linked-with-dropbox? linked-with-dropbox?)))
+ :assoc-search-filter
+ (fn [db [_ filter]]
+   (assoc-in db  [:route-state :filter] filter)))
+
+
 (register-handler
  :assoc-wiki-root-dir
  [(after #(storage/save! "wiki-root-dir" (:wiki-root-dir %)))

@@ -435,14 +435,53 @@
       [:div.col-xs
        [:p.page-preview (str preview "...")]]]]))
 
+(defn filter-pages [index pages filter-str]
+  (let [results (js->clj (.search index (str filter-str)))
+        permalinks (map #(get % "ref") results)
+        filtered-pages (filter #(utils/in? permalinks (:permalink %)) pages)]
+
+    (if (> (.-length filter-str) 0)
+      filtered-pages
+      pages)
+    ))
+
+(defn build-index [pages]
+  (let [index (lunr (fn []
+                      (this-as this
+                        (.ref this "permalink")
+                        (.field this "title")
+                        (.field this "contents")
+
+                        (doseq [page pages]
+                          (.add this (clj->js page))))))]
+    (print "rebuilding index")
+    #_(set! (.-index js/window) index)
+    index))
+
 (defn search-page []
-  (let [pages (subscribe [:all-pages])]
-    (fn []
-      [base-layout
-       [:article#page
-        [:h1.post-title "Search"]
-        [:ul.page-list
-         (map page-list-item @pages)]]])))
+  (let [pages (subscribe [:all-pages])
+        search-text (subscribe [:search-filter])
+        index (atom (build-index @pages))]
+    (reagent/create-class
+     {:component-did-mount 
+      (fn []
+        (go 
+          (reset! index (build-index @pages))))
+      :reagent-render
+      (fn []
+        (let [filtered-pages (filter-pages @index @pages @search-text)]
+          [base-layout
+           [:article#page
+            [:h1.post-title "Search"]
+            [re-com/input-text
+             :change-on-blur? false
+             :model search-text
+             :width "100%"
+             :style {:font-size "16px"}
+             :placeholder "Search..."
+             :on-change #(dispatch [:assoc-search-filter %])]
+            [:ul.page-list
+             (map page-list-item filtered-pages)]]]))})))
 
 (defn home-page []
   [base-layout

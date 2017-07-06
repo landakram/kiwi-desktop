@@ -6,6 +6,10 @@
   :all-pages
   (fn [db] (reaction (get-in @db [:route-state :pages]))))
 
+(register-sub
+ :search-filter
+ (fn [db] (reaction (get-in @db [:route-state :filter]))))
+
 (register-sub 
   :permalinks
   (fn [db] (reaction (get-in @db [:route-state :permalinks]))))

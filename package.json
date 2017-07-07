@@ -9,6 +9,8 @@
     "lunr": "^2.1.0",
     "markdown-it": "^8.3.1",
     "markdown-it-task-lists": "^2.0.1",
+    "mousetrap": "^1.6.1",
+    "mousetrap-global-bind": "^1.1.0",
     "open": "0.0.5"
   }
 }

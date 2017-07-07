@@ -36,6 +36,9 @@
 ;; -------------------------
 ;; Views
 
+
+(def mousetrap (js/require "mousetrap"))
+
 (def electron (js/require "electron"))
 (def shell (.-shell electron))
 (def remote (.-remote electron))
@@ -193,7 +196,7 @@
     (reagent/create-class
       {:reagent-render 
       (fn []
-        [:textarea
+        [:textarea 
           {:style {:width "100%" :height "500px" :display "none"}}])
       :component-did-mount 
       (fn [this]
@@ -224,6 +227,7 @@
                                       {:value contents
                                         :mode "kiwi"
                                         :theme "default"
+                                       :autofocus true
                                         :viewportMargin js/Infinity
                                         :lineWrapping true}))]
           (swap! local-state assoc :editor editor)
@@ -247,6 +251,9 @@
      [page-content-field {:contents (:contents @page) 
                           :on-change #(dispatch-sync [:page-edit %])}]]])
 
+(defn dispatch-new-page! []
+  (dispatch [:show-modal :add-page]))
+
 (defn layout-header []
   [:div.header
    [:div [:a.btn.btn-default {:href (page-route {:permalink "home"})} [:i.fa.fa-home] " Home"]]
@@ -255,7 +262,7 @@
      [:a.btn.btn-default {:href (settings-route)} [:i.fa.fa-cog] " Settings"]
      [:a.btn.btn-default {:href (search-route)} [:i.fa.fa-search] " Search"]
      [:button.btn.btn-default
-      {:on-click #(dispatch [:show-modal :add-page])}
+      {:on-click dispatch-new-page!}
       [:i.fa.fa-plus] " New page"]
      ]]])
 
@@ -474,6 +481,7 @@
            [:article#page
             [:h1.post-title "Search"]
             [re-com/input-text
+             :attr {:auto-focus true}
              :change-on-blur? false
              :model search-text
              :width "100%"
@@ -531,11 +539,75 @@
               (secretary/dispatch! (.-token event))))
         (.setEnabled true)))
 
+(defn toggle-editing! []
+  (dispatch [:assoc-editing? (not @(subscribe [:editing?]))]))
+
+(defn escape! []
+  (when @(subscribe [:editing?])
+    (toggle-editing!))
+  (.blur js/document.activeElement)
+  (dispatch [:hide-modal]))
+
+(def scroll-by 50)
+
+(def keybindings
+  [{:key "e"
+    :keymap :local
+    :handler #(when (not @(subscribe [:editing?]))
+                (toggle-editing!))}
+   {:key "i"
+    :keymap :local
+    :handler #(when (not @(subscribe [:editing?]))
+                (toggle-editing!))}
+
+   {:key "command+enter"
+    :keymap :global
+    :handler toggle-editing!}
+   {:key "g s"
+    :keymap :local
+    :handler #(secretary/dispatch! (search-route))}
+   {:key "g h"
+    :keymap :local
+    :handler #(secretary/dispatch! (page-route {:permalink "home"}))}
+   {:key "n"
+    :keymap :local
+    :handler dispatch-new-page!}
+   {:key "esc"
+    :keymap :global
+    :handler escape!}
+   {:key "ctrl+["
+    :keymap :global
+    :handler escape!}
+   {:key "j"
+    :keymap :local
+    :handler #(.scrollBy js/window 0 scroll-by)}
+   {:key "k"
+    :keymap :local
+    :handler #(.scrollBy js/window 0 (- scroll-by))}
+   {:key "H"
+    :keymap :local
+    :handler #(.back js/window.history)}
+   {:key "L"
+    :keymap :local
+    :handler #(.forward js/window.history)}])
+
+(defn register-keybindings! [keybindings]
+  "Register some vim-esque keybindings for navigation"
+  (doseq [{:keys [key keymap handler] :as binding} keybindings]
+    (cond
+      (= keymap :local) (.bind mousetrap key handler)
+      (= keymap :global) (.bindGlobal mousetrap key handler))))
+
+#_(register-keybindings! keybindings)
+
 (defn ^:export init []
   (enable-console-print!)
   (hook-browser-navigation!)
   (let [wiki-root-dir (storage/load "wiki-root-dir")]
     (dispatch-sync [:initialize {:wiki-root-dir wiki-root-dir}]) 
-    (when (not (nil? wiki-root-dir))
-      (secretary/dispatch! (page-route {:permalink "home"})))
+    (register-keybindings! keybindings)
+
+    (if(not (nil? wiki-root-dir))
+      (secretary/dispatch! (page-route {:permalink "home"}))
+      (secretary/dispatch! (settings-route)))
     (render)))

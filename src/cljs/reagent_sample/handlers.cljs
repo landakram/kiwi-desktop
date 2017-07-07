@@ -35,7 +35,6 @@
   [(path :route-state :page) (after channels/put-page-chan)]
   (fn [page [_ contents]]
     (-> page
-      (assoc-in [:dirty?] true)
       (assoc-in [:contents] contents)
       (assoc-in [:timestamp] (js/Date.)))))
 
@@ -62,15 +61,6 @@
          (= path-arg (:permalink page))))
 
 (register-handler
- :assoc-dirty?
- [(save-page :after)]
- (fn [db [_ page dirty?]]
-   (if (is-current-page page (:current-route db))
-     (assoc-in db [:route-state :page :dirty?] dirty?)
-     db)))
-
-
-(register-handler
  :assoc-editing?
  (fn [db [_ editing?]]
    (assoc-in db [:route-state :editing?] editing?)))
@@ -78,21 +68,13 @@
 ; Kind of a weird use of re-frame's handlers but:
 ;
 ; Here, I use the enrich middleware to *save whichever assoc'd page to localStorage*.
-; I don't update db, because if the user has typed further, they will dirty the page
-; and another sync will be run on its own.
 (register-handler :assoc-page
   [(save-page :before)]
   (fn [db [_ page]]
     (let [current-page (get-in db [:route-state :page])]
       (if (is-current-page page (:current-route db))
-        (when-not (:dirty? current-page)
-          (assoc-in db [:route-state :page] page))
+        (assoc-in db [:route-state :page] page)
         db))))
-
-(register-handler :pull-notes
-  [ (after #(storage/save! "cursor" (:cursor %)))]
-  (fn [db [_ pull-results]]
-    (assoc db :cursor (:cursor pull-results))))
 
 (register-handler :navigate 
   (fn [db [_ route & [route-state]]]

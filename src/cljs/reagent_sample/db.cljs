@@ -168,5 +168,4 @@
 #_{:title (get-title-from-permalink permalink)
    :permalink permalink
    :contents ""
-   :timestamp (js/Date.)
-   :dirty? true}
+   :timestamp (js/Date.)}

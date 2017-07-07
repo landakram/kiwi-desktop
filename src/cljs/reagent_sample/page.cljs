@@ -58,9 +58,5 @@
   {:title (get-title-from-permalink permalink)
    :permalink permalink
    :contents ""
-   :timestamp (js/Date.)
-   :dirty? true})
-
-; Ugly, but checks whether the currently displayed wiki page is the page
-
+   :timestamp (js/Date.)})
 

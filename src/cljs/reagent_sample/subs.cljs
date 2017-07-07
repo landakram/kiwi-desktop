@@ -27,3 +27,7 @@
 (register-sub :modal
               (fn [db _]
                 (reaction (get-in @db [:route-state :modal]))))
+
+(register-sub :current-route 
+              (fn [db] 
+                (reaction (get-in @db [:current-route]))))

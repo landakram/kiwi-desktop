@@ -1,3 +1,6 @@
+;; * Imports
+;; ** cljs imports
+
 (ns reagent-sample.core
     (:require-macros [reagent.ratom :refer [reaction]]
                      [cljs.core.async.macros :refer [go-loop go]])
@@ -33,12 +36,9 @@
               [reagent-sample.page :as page])
     (:import goog.History))
 
-;; -------------------------
-;; Views
-
+;; ** JavaScript imports
 
 (def mousetrap (js/require "mousetrap"))
-
 (def electron (js/require "electron"))
 (def shell (.-shell electron))
 (def remote (.-remote electron))
@@ -55,7 +55,7 @@
   ISeqable
     (-seq [array] (array-seq array 0)))
 
-(defonce img-cache (atom {}))
+;; * Markdown utility functions
 
 (defn path->filename [path]
   (-> path
@@ -127,6 +127,8 @@
           (.highlightBlock js/hljs item))
         (recur (dec i))))))
 
+;; * Routes
+
 (secretary/set-config! :prefix "#")
 
 (secretary/defroute index-route "/" []
@@ -142,9 +144,6 @@
                  {:pages pages
                   :filter ""}]))))
 
-(secretary/defroute about-route "/about" []
-  (dispatch [:navigate [:about-page]]))
-
 (secretary/defroute page-route "/page/:permalink" [permalink]
   (go
     (let [maybe-page (<! (page-db/load permalink))
@@ -155,41 +154,12 @@
       (dispatch [:navigate [:wiki-page-view permalink]
                  {:page page :permalinks permalinks :editing? false}]))))
 
-
-(defn markdown-content [content]
-  (let [wiki-root-dir (subscribe [:wiki-root-dir])
-        permalinks (subscribe [:permalinks])]
-    (reagent/create-class
-      {:reagent-render 
-       (fn [content]
-         [:div
-          {:dangerouslySetInnerHTML
-           {:__html (markdown->html @wiki-root-dir content @permalinks)}}])
-       :component-did-update
-       (fn [this]
-         (let [node (reagent/dom-node this)]
-           (js/window.renderMath)
-           (rewrite-internal-links @permalinks node)
-           (highlight-code node)))
-       :component-did-mount
-       (fn [this]
-         (let [node (reagent/dom-node this)]
-           (js/window.renderMath)
-           (rewrite-internal-links @permalinks node)
-           (highlight-code node)))})))
-
+;; * Views
+;; ** Editor
 
 (defn page-title-field [page]
   (let [{:keys [title]} @page]
     [:h1.post-title title]))
-
-
-; Save updated pages to localStorage
-(go-loop []
-  (let [page (<! channels/page-changes)]
-    (when page
-      (page-db/save! page)
-      (recur))))
 
 (defn page-content-field []
   (let [local-state (atom {})]
@@ -251,21 +221,6 @@
      [page-content-field {:contents (:contents @page) 
                           :on-change #(dispatch-sync [:page-edit %])}]]])
 
-(defn dispatch-new-page! []
-  (dispatch [:show-modal :add-page]))
-
-(defn layout-header []
-  [:div.header
-   [:div [:a.btn.btn-default {:href (page-route {:permalink "home"})} [:i.fa.fa-home] " Home"]]
-   [:nav.navigation
-    [:div.btn-group
-     [:a.btn.btn-default {:href (settings-route)} [:i.fa.fa-cog] " Settings"]
-     [:a.btn.btn-default {:href (search-route)} [:i.fa.fa-search] " Search"]
-     [:button.btn.btn-default
-      {:on-click dispatch-new-page!}
-      [:i.fa.fa-plus] " New page"]
-     ]]])
-
 (defn edit-button [editing]
   [:button.edit-button.btn.btn-default
    {:on-click (fn [] (dispatch [:assoc-editing?  (not @editing)]))} 
@@ -280,12 +235,28 @@
   [:button.close {:on-click on-click
                   :dangerouslySetInnerHTML {:__html "<span>&times;</span>"}}])
 
+;; ** Navigation bar
+
+(defn dispatch-new-page! []
+  (dispatch [:show-modal :add-page]))
+
+(defn layout-header []
+  [:div.header
+   [:div [:a.btn.btn-default {:href (page-route {:permalink "home"})} [:i.fa.fa-home] " Home"]]
+   [:nav.navigation
+    [:div.btn-group
+     [:a.btn.btn-default {:href (settings-route)} [:i.fa.fa-cog] " Settings"]
+     [:a.btn.btn-default {:href (search-route)} [:i.fa.fa-search] " Search"]
+     [:button.btn.btn-default
+      {:on-click dispatch-new-page!}
+      [:i.fa.fa-plus] " New page"]]]])
+
+;; ** Modals
+
 (defn modal [content]
   [re-com/modal-panel
    :child content
    :backdrop-on-click #(dispatch [:hide-modal])])
-
-
 
 (defn add-page-form
   "A form that lets a user specify options for creating a page."
@@ -356,16 +327,30 @@
 (defmethod modals :add-page [] [add-page-modal])
 (defmethod modals :delete-page [] [delete-page-modal])
 
-(defn base-layout [content]
-  (let [modal (subscribe [:modal])]
-    (fn [content] 
-      [:div
-       [layout-header]
-       [:section.content-wrapper
-        [:div.content
-         content]]
-       (when @modal
-         (modals @modal))])))
+;; ** Wiki Page
+
+(defn markdown-content [content]
+  (let [wiki-root-dir (subscribe [:wiki-root-dir])
+        permalinks (subscribe [:permalinks])]
+    (reagent/create-class
+      {:reagent-render 
+       (fn [content]
+         [:div
+          {:dangerouslySetInnerHTML
+           {:__html (markdown->html @wiki-root-dir content @permalinks)}}])
+       :component-did-update
+       (fn [this]
+         (let [node (reagent/dom-node this)]
+           (js/window.renderMath)
+           (rewrite-internal-links @permalinks node)
+           (highlight-code node)))
+       :component-did-mount
+       (fn [this]
+         (let [node (reagent/dom-node this)]
+           (js/window.renderMath)
+           (rewrite-internal-links @permalinks node)
+           (highlight-code node)))})))
+
 
 (defn delete-button [page editing]
   (fn [page]
@@ -390,6 +375,17 @@
              [:article [markdown-content contents]]]
             [editor {:page page :editing @editing}])]))))
 
+(defn base-layout [content]
+  (let [modal (subscribe [:modal])]
+    (fn [content] 
+      [:div
+       [layout-header]
+       [:section.content-wrapper
+        [:div.content
+         content]]
+       (when @modal
+         (modals @modal))])))
+
 (defn wiki-page []
   (let [page (subscribe [:current-page])]
     (reagent/create-class
@@ -398,6 +394,7 @@
         [base-layout
          [wiki-page-contents page]])})))
 
+;; ** Settings
 
 (defn set-wiki-root-button []
   (let [on-directory-chosen
@@ -422,6 +419,7 @@
           [:p [ :code @wiki-root-dir]])
         [set-wiki-root-button]]])))
 
+;; ** Search
 
 (defn page-list-item [page]
   (let [title (:title page)
@@ -491,26 +489,17 @@
             [:ul.page-list
              (map page-list-item filtered-pages)]]]))})))
 
+;; ** Home page
+
 (defn home-page []
   [base-layout
    [:article#page]])
 
-(defn about-page []
-  [:div [:h1 "This is an about page"]
-   [:div [:a {:href "/"} "Home Page"]]])
-
-;; -------------------------
-;; Routes
-(register-sub :current-route 
-              (fn [db] 
-                (reaction (get-in @db [:current-route]))))
+;; ** Wiring
 
 (defmulti page
   (fn [name _]
     name))
-
-(defmethod page :about-page [_ _] 
-  [about-page])
 
 (defmethod page :home-page [_ _] 
   [home-page])
@@ -531,13 +520,7 @@
 (defn render [] 
   (reagent/render [app] (.getElementById js/document "app")))
 
-(defn hook-browser-navigation! []
-  (doto (History.)
-        (events/listen
-          HistoryEventType/NAVIGATE
-          (fn [event]
-              (secretary/dispatch! (.-token event))))
-        (.setEnabled true)))
+;; * Keybindings
 
 (defn toggle-editing! []
   (dispatch [:assoc-editing? (not @(subscribe [:editing?]))]))
@@ -599,6 +582,25 @@
       (= keymap :global) (.bindGlobal mousetrap key handler))))
 
 #_(register-keybindings! keybindings)
+
+;; * Page channel loop
+
+; Save updated pages to localStorage
+(go-loop []
+  (let [page (<! channels/page-changes)]
+    (when page
+      (page-db/save! page)
+      (recur))))
+
+;; * Main
+
+(defn hook-browser-navigation! []
+  (doto (History.)
+        (events/listen
+          HistoryEventType/NAVIGATE
+          (fn [event]
+              (secretary/dispatch! (.-token event))))
+        (.setEnabled true)))
 
 (defn ^:export init []
   (enable-console-print!)

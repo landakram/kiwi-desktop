@@ -8,7 +8,9 @@ pom.xml.asc
 *.class
 /.lein-*
 /.nrepl-port
-/resources/public/js
+/resources/public/js/app.js
+/resources/public/js/electron-dev
+/resources/public/js/out
 /out
 /.repl
 *.log

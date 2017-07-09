@@ -4,9 +4,9 @@
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/clojure "1.7.0"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
                  [ring-server "0.4.0"]
-                 [reagent "0.5.1"]
+                 [reagent "0.6.0"]
                  [reagent-forms "0.5.11"]
                  [reagent-utils "0.1.5"]
                  [ring "1.4.0"]
@@ -16,9 +16,9 @@
                  [hiccup "1.0.5"]
                  [environ "1.0.1"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                 [org.clojure/clojurescript "1.7.122" :scope "provided"]
+                 [org.clojure/clojurescript "1.9.671" :scope "provided"]
                  [kibu/pushy "0.3.3"]
-                 [re-frame "0.5.0-alpha1"]
+                 [re-frame "0.9.4"]
                  [re-com "1.0.0"]
                  [tailrecursion/cljson "1.0.7"]
                  [secretary "1.2.3"]
@@ -27,8 +27,8 @@
                  [binaryage/devtools "0.9.4"]]
 
   :plugins [[lein-environ "1.0.1"]
-            [lein-cljsbuild "1.1.3"]
-            [lein-figwheel "0.5.8"]
+            [lein-cljsbuild "1.1.6"]
+            [lein-figwheel "0.5.11"]
             [lein-asset-minifier "0.2.2"]]
 
   :min-lein-version "2.5.0"
@@ -52,7 +52,7 @@
                         :compiler     {:output-to     "resources/public/js/app.js"
                                        :output-dir    "resources/public/js/out"
                                        :asset-path    "js/out"
-                                       :preloads '[devtools.preload]
+                                       :preloads [devtools.preload]
                                        :main          reagent-sample.core
                                        :optimizations :none
                                        :source-map    true

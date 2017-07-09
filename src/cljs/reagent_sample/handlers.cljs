@@ -38,12 +38,6 @@
       (assoc-in [:contents] contents)
       (assoc-in [:timestamp] (js/Date.)))))
 
-(defn save-page [when-to-save]
-  (let [middleware (if (= :before when-to-save) enrich after)]
-    (middleware (fn [db [_ page]] 
-                  (page-db/save! page)
-                  db))))
-
 (reg-event-db
  :show-modal
  (path :route-state)

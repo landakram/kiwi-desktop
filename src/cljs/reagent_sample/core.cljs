@@ -509,6 +509,8 @@
 
 (def scroll-by 50)
 
+(def page-scroll-by 300)
+
 (def keybindings
   [{:key "e"
     :keymap :local
@@ -537,6 +539,12 @@
    {:key "ctrl+["
     :keymap :global
     :handler escape!}
+   {:key "u"
+    :keymap :local
+    :handler #(.scrollBy js/window 0 (- page-scroll-by))}
+   {:key "d"
+    :keymap :local
+    :handler #(.scrollBy js/window 0 page-scroll-by)}
    {:key "j"
     :keymap :local
     :handler #(.scrollBy js/window 0 scroll-by)}

@@ -6,6 +6,9 @@
 (def open (js/require "open"))
 (def app            (.-app electron))
 (def browser-window (.-BrowserWindow electron))
+(def context-menu (js/require "electron-context-menu"))
+
+(context-menu (clj->js {}))
 
 (def main-window (atom nil))
 

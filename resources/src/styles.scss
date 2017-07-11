@@ -229,14 +229,18 @@ img.emoji {
     color: #666;
 }
 
-.task-list, .contains-task-list {
+.task-list {
     list-style: none;
     padding-left: 20px;
 
 }
 
-.task-list-item-checkbox {
+.task-list-item input[type=checkbox] {
     margin-right: 5px;
+}
+
+.task-list-item label {
+    display: inline;
 }
 
 .btn-default {

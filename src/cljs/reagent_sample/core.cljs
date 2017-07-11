@@ -48,7 +48,7 @@
 
 (def Markdown (js/require "markdown-it"))
 (def markdown-renderer (Markdown.))
-(.use markdown-renderer (js/require "markdown-it-task-lists"))
+(.use markdown-renderer (js/require "markdown-it-task-checkbox"))
 (set! (.-markdown js/window) markdown-renderer)
 
 (extend-type js/NodeList
@@ -588,7 +588,7 @@
     (dispatch-sync [:initialize {:wiki-root-dir wiki-root-dir}]) 
     (register-keybindings! keybindings)
 
-    (if(not (nil? wiki-root-dir))
+    (if (not (nil? wiki-root-dir))
       (secretary/dispatch! (page-route {:permalink "home"}))
       (secretary/dispatch! (settings-route)))
     (render)))

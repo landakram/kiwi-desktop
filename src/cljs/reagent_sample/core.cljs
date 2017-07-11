@@ -165,54 +165,49 @@
   (let [local-state (atom {})]
     (reagent/create-class
       {:reagent-render 
-      (fn []
-        [:textarea 
+       (fn []
+         [:textarea 
           {:style {:width "100%" :height "500px" :display "none"}}])
-      :component-did-mount 
-      (fn [this]
-        (let [{:keys [on-change contents]} (reagent/props this)
-              node (reagent/dom-node this)
-              ;; Adds syntax highlighting for [[Internal Links]]
-              token-fn (fn [stream state] 
-                        (if-let [match (when (.match stream "[[")
-                                        (loop [ch (.next stream)]
-                                          (if (and (= ch "]") (= (.next stream) "]"))
-                                            (do (.eat stream "]")
-                                                "internal-link")
-                                            (when-not (nil? ch) (recur (.next stream))))))]
-                          match
-                          (do
-                            (while (and (.next stream) 
-                                      (not (.match stream "[[" false))
-                                      (not (.match stream "\n" false)))
-                              1))))
-              mode (.defineMode js/CodeMirror "kiwi" 
-                     (fn [config, parser-config]
-                       (.overlayMode js/CodeMirror (.getMode js/CodeMirror 
-                                               config 
-                                               (or (.-backdrop parser-config) "gfm"))
-                                     #js {:token token-fn})))
-              editor (js/CodeMirror #(.appendChild (.-parentNode node) %)
-                                    (clj->js
+       :component-did-mount 
+       (fn [this]
+         (print "editor-did-mount")
+         (let [{:keys [on-change contents]} (reagent/props this)
+               node (reagent/dom-node this)
+               ;; Adds syntax highlighting for [[Internal Links]]
+               token-fn (fn [stream state] 
+                          (if-let [match (when (.match stream "[[")
+                                           (loop [ch (.next stream)]
+                                             (if (and (= ch "]") (= (.next stream) "]"))
+                                               (do (.eat stream "]")
+                                                   "internal-link")
+                                               (when-not (nil? ch) (recur (.next stream))))))]
+                            match
+                            (do
+                              (while (and (.next stream) 
+                                          (not (.match stream "[[" false))
+                                          (not (.match stream "\n" false)))
+                                1))))
+               mode (.defineMode js/CodeMirror "kiwi" 
+                                 (fn [config, parser-config]
+                                   (.overlayMode js/CodeMirror (.getMode js/CodeMirror 
+                                                                         config 
+                                                                         (or (.-backdrop parser-config) "gfm"))
+                                                 #js {:token token-fn})))
+               editor (js/CodeMirror #(.appendChild (.-parentNode node) %)
+                                     (clj->js
                                       {:value contents
-                                        :mode "kiwi"
-                                        :theme "default"
+                                       :mode "kiwi"
+                                       :theme "default"
                                        :autofocus true
-                                        :viewportMargin js/Infinity
-                                        :lineWrapping true}))]
-          (swap! local-state assoc :editor editor)
-          (swap! local-state assoc :value contents)
-          (.on editor "change" 
-            (fn [instance change-obj]
-              (let [new-value (.getValue instance)]
-                (swap! local-state assoc :value new-value)
-                (on-change new-value))))))
-      :component-will-receive-props
-      (fn [this new-argv]
-        (let [{:keys [contents]} (reagent/props this)
-              {:keys [editor value]} @local-state]
-          (when-not (= value contents) 
-            (.setValue (.-doc (:editor @local-state)) contents))))})))
+                                       :viewportMargin js/Infinity
+                                       :lineWrapping true}))]
+           (swap! local-state assoc :editor editor)
+           (swap! local-state assoc :value contents)
+           (.on editor "change" 
+                (fn [instance change-obj]
+                  (let [new-value (.getValue instance)]
+                    (swap! local-state assoc :value new-value)
+                    (on-change new-value))))))})))
 
 
 (defn editor [{:keys [page editing]}]

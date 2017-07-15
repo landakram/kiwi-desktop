@@ -52,6 +52,19 @@
 (.use md (js/require "markdown-it-task-checkbox") (clj->js {:disabled false}))
 (set! (.-md js/window) md)
 
+(def markdown (js/require "remark-parse"))
+(def remark-to-rehype (js/require "remark-rehype"))
+(def fmt-html (js/require "rehype-format"))
+(def html (js/require "rehype-stringify"))
+(def unified (js/require "unified"))
+(def task-list-plugin (js/require "remark-task-list"))
+(def ^js/unified md-processor (-> (unified)
+                      (.use markdown (clj->js {:gfm true :footnotes true :yaml true}))
+                      (.use task-list-plugin (clj->js {}))
+                      (.use remark-to-rehype)
+                      (.use fmt-html)
+                      (.use html)))
+
 (extend-type js/NodeList
   ISeqable
     (-seq [array] (array-seq array 0)))
@@ -114,17 +127,19 @@
 (defn attach-checkbox-handlers [html-node]
   (let [nodes (.querySelectorAll html-node "input[type=checkbox]")]
     (doseq [node nodes]
+      (set! (.-disabled node) false)
       (set! (.-onclick node)
             (fn [e]
               (this-as this
-                (dispatch [:checkbox-toggle [(.-id this)]])
+                (dispatch [:checkbox-toggle [(.-id (.-parentNode this))]])
                 (.preventDefault e)))))
     nodes))
 
 (defn markdown->html [wiki-root-dir markdown permalinks]
     (let [html-contents (->> markdown
                             str
-                            (.render md)
+                            (.processSync md-processor)
+                            (.toString)
                             (#(page/parse-wiki-links % permalinks))
                             (rewrite-image-paths wiki-root-dir)
                             (rewrite-external-links))]
@@ -212,7 +227,20 @@
                                        :theme "default"
                                        :autofocus true
                                        :viewportMargin js/Infinity
-                                       :lineWrapping true}))]
+                                       :lineWrapping true
+                                       :extraKeys {:Tab (fn [^js/CodeMirror cm]
+                                                          (if (.somethingSelected cm)
+                                                            (.indentSelection cm "add")
+                                                            (.replaceSelection
+                                                             cm
+                                                             (-> cm
+                                                                 (.getOption "indentUnit")
+                                                                 (+ 1)
+                                                                 js/Array
+                                                                 (.join " "))
+                                                             "end"
+                                                             "+input")))}
+                                       }))]
            (swap! local-state assoc :editor editor)
            (swap! local-state assoc :value contents)
            (.on editor "change" 

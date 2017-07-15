@@ -82,3 +82,27 @@
  :<- [:all-pages]
  :<- [:search-filter]
  filter-pages)
+
+
+
+
+
+#_(def markdown (js/require "remark-parse"))
+#_(def md-stringify (js/require "remark-stringify"))
+#_(def unified (js/require "unified"))
+#_(def task-list-plugin (js/require "remark-task-list"))
+#_(def md-processor (-> (unified)
+                      (.use markdown (clj->js {:gfm true :footnotes true :yaml true}))
+                      (.use md-stringify)))
+
+
+#_(reg-sub
+ :current-page-ast
+ :<- [:current-page]
+ (fn [current-page]
+   (let [processor (-> (md-processor)
+                       (.use task-list-plugin (clj->js {})))]
+     (-> (:contents current-page)
+         (processor.parse)
+         (processor.runSync)
+         (js->clj)))))

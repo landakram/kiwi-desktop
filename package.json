@@ -14,6 +14,14 @@
     "markdown-it-task-checkbox": "^1.0.4",
     "mousetrap": "^1.6.1",
     "mousetrap-global-bind": "^1.1.0",
-    "open": "0.0.5"
+    "open": "0.0.5",
+    "rehype-format": "^2.2.0",
+    "rehype-stringify": "^3.0.0",
+    "remark": "^7.0.1",
+    "remark-parse": "^3.0.1",
+    "remark-rehype": "^2.0.1",
+    "remark-stringify": "^3.0.1",
+    "remark-task-list": "0.0.2",
+    "unified": "^6.1.5"
   }
 }

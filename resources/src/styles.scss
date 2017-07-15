@@ -122,6 +122,9 @@ article img {
     margin-left: auto;
     margin-right: auto;
 }
+article li p {
+    margin-bottom: 0;
+}
 
 pre {
     overflow: scroll;
@@ -229,10 +232,9 @@ img.emoji {
     color: #666;
 }
 
-.task-list {
+.task-list-item {
     list-style: none;
-    padding-left: 20px;
-
+    margin-left: -20px;
 }
 
 .task-list-item input[type=checkbox] {

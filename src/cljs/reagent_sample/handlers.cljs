@@ -1,12 +1,13 @@
 (ns reagent-sample.handlers
-  (:require [re-frame.core :as re-frame :refer [after enrich path reg-event-db]]
+  (:require [re-frame.core :as re-frame :refer [after enrich path reg-event-db reg-event-fx]]
             [reagent-sample.channels :as channels]
             [reagent-sample.db :as page-db]
             [reagent-sample.storage :as storage]
             [reagent-sample.page :as page]
             [secretary.core :as secretary]
             [pushy.core :as pushy]
-            [reagent-sample.history :refer [history]]))
+            [reagent-sample.history :refer [history]]
+            [reagent-sample.utils :as utils]))
 
 (defonce initial-state {:current-route [:home-page]
                         :route-state {}})
@@ -88,8 +89,22 @@
      #_(print db)
      db)))
 
-(reg-event-db
+(def markdown (js/require "remark-parse"))
+(def md-stringify (js/require "remark-stringify"))
+(def unified (js/require "unified"))
+(def task-list-plugin (js/require "remark-task-list"))
+(def ^js/unified md-processor (-> (unified)
+                      (.use markdown (clj->js {:gfm true :footnotes true :yaml true}))
+                      (.use md-stringify)))
+
+(reg-event-fx
  :checkbox-toggle
- (fn [db [_ [checkbox-id]]]
-   (js/console.log checkbox-id)
-   db))
+ (fn [{:keys [db] :as cofx} [_ [checkbox-id]]]
+   (let [processor (-> (md-processor)
+                       (.use task-list-plugin (clj->js {"toggle" [checkbox-id]})))
+         old-content (get-in db [:route-state :page :contents])
+         new-content (-> old-content
+                         (processor.processSync)
+                         (.toString))]
+     {:db db
+      :dispatch [:page-edit new-content]})))

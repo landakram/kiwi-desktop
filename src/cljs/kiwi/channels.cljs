@@ -1,4 +1,4 @@
-(ns reagent-sample.channels
+(ns kiwi.channels
   (:require-macros [cljs.core.async.macros :refer [go-loop go]])
   (:require [cljs.core.async :refer [chan put! timeout alts! <! >!]]))
 

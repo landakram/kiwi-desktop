@@ -1,4 +1,4 @@
-(defproject reagent-sample "0.1.0-SNAPSHOT"
+(defproject kiwi "0.1.0-SNAPSHOT"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -23,7 +23,6 @@
                  [re-com "1.0.0"]
                  [tailrecursion/cljson "1.0.7"]
                  [secretary "1.2.3"]
-                 [cljsjs/dexie "1.2.0-1"]
                  [com.andrewmcveigh/cljs-time "0.5.0"]
                  [binaryage/devtools "0.9.4"]]
 
@@ -49,17 +48,17 @@
   {:assets
    {"resources/public/css/site.min.css" "resources/public/css/site.css"}}
 
-  :repl-options {:init-ns          reagent-sample.repl
+  :repl-options {:init-ns          kiwi.repl
                  :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
   :cljsbuild {:builds [{:id           "dev"
-                        :source-paths ["src/clj" "src/cljs/reagent_sample" "src/cljc" "env/dev/cljs"]
-                        :figwheel     {:on-jsload "reagent-sample.core/render"}
+                        :source-paths ["src/clj" "src/cljs/kiwi" "src/cljc" "env/dev/cljs"]
+                        :figwheel     {:on-jsload "kiwi.core/render"}
                         :compiler     {:output-to     "resources/public/js/app.js"
                                        :output-dir    "resources/public/js/out"
                                        :asset-path    "js/out"
                                        :preloads [devtools.preload]
-                                       :main          "reagent-sample.core"
+                                       :main          "kiwi.core"
                                        :optimizations :none
                                        :source-map    true
                                        :pretty-print  true}}
@@ -71,11 +70,11 @@
                                    :pretty-print true
                                    :cache-analysis true}}
                        {:id           "release"
-                        :source-paths ["src/clj" "src/cljs/reagent_sample" "src/cljc"]
+                        :source-paths ["src/clj" "src/cljs/kiwi" "src/cljc"]
                         :compiler     {:output-to     "resources/public/js/app.js"
                                        :output-dir    "resources/public/js/app-release"
                                        :asset-path    "js/app-release"
-                                       :main          "reagent-sample.core"
+                                       :main          "kiwi.core"
                                        :optimizations :advanced
                                        :cache-analysis true
                                        :infer-externs true

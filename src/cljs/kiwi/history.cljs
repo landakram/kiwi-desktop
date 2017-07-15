@@ -1,4 +1,4 @@
-(ns reagent-sample.history
+(ns kiwi.history
   (:require [pushy.core  :as pushy]
             [secretary.core  :as secretary]))
 

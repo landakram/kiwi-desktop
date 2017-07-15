@@ -1,13 +1,17 @@
-(ns reagent-sample.handlers
-  (:require [re-frame.core :as re-frame :refer [after enrich path reg-event-db reg-event-fx]]
-            [reagent-sample.channels :as channels]
-            [reagent-sample.db :as page-db]
-            [reagent-sample.storage :as storage]
-            [reagent-sample.page :as page]
-            [secretary.core :as secretary]
+(ns kiwi.handlers
+  (:require [kiwi.channels :as channels]
+            [kiwi.db :as page-db]
+            [kiwi.history :refer [history]]
+            [kiwi.page :as page]
+            [kiwi.storage :as storage]
+            [kiwi.utils :as utils]
             [pushy.core :as pushy]
-            [reagent-sample.history :refer [history]]
-            [reagent-sample.utils :as utils]))
+            [re-frame.core
+             :as
+             re-frame
+             :refer
+             [after enrich path reg-event-db reg-event-fx]]
+            [secretary.core :as secretary]))
 
 (defonce initial-state {:current-route [:home-page]
                         :route-state {}})
@@ -26,6 +30,10 @@
   (fn [db [_ state]]
     ; Use initial-state as a default, but keep anything already in db
     (merge initial-state db (or state {}))))
+
+(defn p-r [thing]
+  (js/console.log thing)
+  thing)
 
 (reg-event-db :page-edit 
   ; This vector is middleware. 

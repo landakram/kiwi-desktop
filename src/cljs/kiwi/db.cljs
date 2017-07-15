@@ -1,11 +1,9 @@
-(ns reagent-sample.db
-  (:require [cljsjs.dexie]
-            [cljs.core.async :refer [chan <! put! take! >!]]
-            [reagent-sample.page :as page]
+(ns kiwi.db
+  (:require [cljs.core.async :as async :refer [<! >! chan put! take!]]
             [clojure.string :as string]
-            [reagent-sample.utils :as utils]
-            [cljs.core.async :as async])
-  (:require-macros [cljs.core.async.macros :refer [go-loop go]]))
+            [kiwi.page :as page] 
+            [kiwi.utils :as utils])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (def fs (js/require "fs"))
 

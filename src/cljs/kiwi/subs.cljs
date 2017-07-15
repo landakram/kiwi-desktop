@@ -1,7 +1,7 @@
-(ns reagent-sample.subs
-  (:require-macros [reagent.ratom :refer [reaction]])
-  (:require [re-frame.core :as re-frame :refer [reg-sub]]
-            [reagent-sample.utils :as utils]))
+(ns kiwi.subs
+  (:require [kiwi.utils :as utils]
+            [re-frame.core :as re-frame :refer [reg-sub]])
+  (:require-macros [reagent.ratom :refer [reaction]]))
 
 (reg-sub 
  :all-pages

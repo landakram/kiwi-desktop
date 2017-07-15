@@ -1,40 +1,29 @@
-;; * Imports
-;; ** cljs imports
-
-(ns reagent-sample.core
-    (:require-macros [reagent.ratom :refer [reaction]]
-                     [cljs.core.async.macros :refer [go-loop go]])
-    (:require [reagent.core :as reagent]
-              [reagent.session :as session]
-              [re-frame.db :refer [app-db]]
-              [re-com.core :as re-com]
-              [re-frame.core :as re-frame
-               :refer [dispatch
-                       dispatch-sync
-                       register-sub
-                       subscribe
-                       register-handler
-                       after
-                       enrich
-                       path]]
-              [secretary.core :as secretary :include-macros true]
-              [goog.events :as events]
-              [pushy.core :as pushy]
-              [clojure.string :as string]
-              [goog.history.EventType :as HistoryEventType]
-              [tailrecursion.cljson :refer [clj->cljson cljson->clj]]
-              [cljs.core.async :refer [chan <! put! pipe timeout]]
-              [cljs-time.format :as f]
-              [cljs-time.coerce :as coerce]
-              [reagent-sample.subs :as subs]
-              [reagent-sample.handlers :as handlers]
-              [reagent-sample.storage :as storage]
-              [reagent-sample.db :as page-db]
-              [reagent-sample.channels :as channels]
-              [reagent-sample.utils :as utils]
-              [reagent-sample.history :refer [ history]]
-              [reagent-sample.page :as page])
-    (:import goog.History))
+(ns kiwi.core
+  (:require [cljs-time.coerce :as coerce]
+            [cljs-time.format :as f]
+            [cljs.core.async :refer [<! chan pipe put! timeout]]
+            [clojure.string :as string]
+            [goog.events :as events]
+            [goog.history.EventType :as HistoryEventType]
+            [kiwi.channels :as channels]
+            [kiwi.db :as page-db]
+            [kiwi.handlers :as handlers]
+            [kiwi.history :refer [history]]
+            [kiwi.page :as page]
+            [kiwi.storage :as storage]
+            [kiwi.subs :as subs]
+            [kiwi.utils :as utils]
+            [pushy.core :as pushy]
+            [re-com.core :as re-com]
+            [re-frame.core :as re-frame :refer [after dispatch dispatch-sync enrich path register-handler register-sub subscribe]]
+            [re-frame.db :refer [app-db]]
+            [reagent.core :as reagent]
+            [reagent.session :as session]
+            [secretary.core :as secretary :include-macros true])
+  (:require-macros
+   [cljs.core.async.macros :refer [go go-loop]]
+   [reagent.ratom :refer [reaction]])
+  (:import goog.History))
 
 ;; ** JavaScript imports
 
@@ -398,6 +387,7 @@
                                (dispatch [:show-modal :delete-page]))}
      [:i.fa.fa-trash]
      " Delete"]))
+
 
 (defn wiki-page-contents [page]
   (let [editing (subscribe [:editing?])]

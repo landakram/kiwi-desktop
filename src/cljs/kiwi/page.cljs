@@ -1,6 +1,6 @@
-(ns reagent-sample.page
+(ns kiwi.page
   (:require [clojure.string :as string]
-            [reagent-sample.utils :as utils]))
+            [kiwi.utils :as utils]))
 
 (defn capitalize-words [s]
   (->> (string/split (str s) #"\b")

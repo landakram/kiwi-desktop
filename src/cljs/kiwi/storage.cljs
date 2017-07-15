@@ -1,4 +1,4 @@
-(ns reagent-sample.storage
+(ns kiwi.storage
   (:require [tailrecursion.cljson :refer [clj->cljson cljson->clj]]))
 
 (defn save! [key data]

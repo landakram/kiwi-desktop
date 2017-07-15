@@ -1,4 +1,4 @@
-(ns reagent-sample.utils
+(ns kiwi.utils
   (:require [cljs.core.async :refer [chan <! pipe]]))
 
 (defn in? 

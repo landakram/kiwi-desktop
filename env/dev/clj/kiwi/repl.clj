@@ -1,5 +1,5 @@
-(ns reagent-sample.repl
-  (:use reagent-sample.handler
+(ns kiwi.repl
+  (:use kiwi.handler
         ring.server.standalone
         [ring.middleware file-info file])
   (:require [figwheel-sidecar.repl-api :as repl-api]))
@@ -37,7 +37,7 @@
                               :server-port 3449
                               :nrepl-port 7002
                               :css-dirs ["resources/public/css"]
-                              :ring-handler reagent-sample.handler/app}
+                              :ring-handler kiwi.handler/app}
    :build-ids ["dev"]
    :all-builds
    []})

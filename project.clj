@@ -19,11 +19,12 @@
                  [org.clojure/clojurescript "1.9.671" :scope "provided"]
                  [kibu/pushy "0.3.3"]
                  [re-frame "0.9.4"]
+                 [day8.re-frame/test "0.1.5"]
                  [re-com "1.0.0"]
                  [tailrecursion/cljson "1.0.7"]
                  [secretary "1.2.3"]
                  [cljsjs/dexie "1.2.0-1"]
-                 [com.andrewmcveigh/cljs-time "0.3.14"]
+                 [com.andrewmcveigh/cljs-time "0.5.0"]
                  [binaryage/devtools "0.9.4"]]
 
   :plugins [[lein-environ "1.0.1"]
@@ -34,8 +35,13 @@
   :min-lein-version "2.5.0"
 
   :clean-targets ^{:protect false} [:target-path
-                                    [:cljsbuild :builds :app :compiler :output-dir]
-                                    [:cljsbuild :builds :app :compiler :output-to]]
+                                    "resources/main.js"
+                                    "resources/public/js/app.js"
+                                    "resources/public/js/app.js.map"
+                                    "resources/public/js/out"
+                                    "resources/public/js/app-release"
+                                    "resources/public/js/electron-release"
+                                    "resources/public/js/electron-dev"]
 
   :source-paths ["src/clj" "src/cljc" "src/cljs"]
 
@@ -53,7 +59,7 @@
                                        :output-dir    "resources/public/js/out"
                                        :asset-path    "js/out"
                                        :preloads [devtools.preload]
-                                       :main          reagent-sample.core
+                                       :main          "reagent-sample.core"
                                        :optimizations :none
                                        :source-map    true
                                        :pretty-print  true}}
@@ -63,7 +69,28 @@
                                    :output-dir "resources/public/js/electron-dev"
                                    :optimizations :simple
                                    :pretty-print true
-                                   :cache-analysis true}}]}
+                                   :cache-analysis true}}
+                       {:id           "release"
+                        :source-paths ["src/clj" "src/cljs/reagent_sample" "src/cljc"]
+                        :compiler     {:output-to     "resources/public/js/app.js"
+                                       :output-dir    "resources/public/js/app-release"
+                                       :asset-path    "js/app-release"
+                                       :main          "reagent-sample.core"
+                                       :optimizations :advanced
+                                       :cache-analysis true
+                                       :infer-externs true
+                                       :source-map    "resources/public/js/app.js.map"
+                                       :pretty-print  true}}
+                       {:id "electron-release"
+                        :source-paths ["src/cljs/electron"]
+                        :compiler {:output-to "resources/main.js"
+                                   :output-dir "resources/public/js/electron-release"
+                                   :optimizations :advanced
+                                   :pretty-print true
+                                   :cache-analysis true
+                                   :infer-externs true}}
+                       ]
+              }
 
   :figwheel {:http-server-root "public"
              :css-dirs         ["resources/public/css"]

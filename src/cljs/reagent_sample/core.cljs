@@ -47,13 +47,16 @@
 (set! (.-lunr js/window) lunr)
 
 (def Markdown (js/require "markdown-it"))
-(def markdown-renderer (Markdown.))
-(.use markdown-renderer (js/require "markdown-it-task-checkbox"))
-(set! (.-markdown js/window) markdown-renderer)
+
+(def md (Markdown.))
+(.use md (js/require "markdown-it-task-checkbox") (clj->js {:disabled false}))
+(set! (.-md js/window) md)
 
 (extend-type js/NodeList
   ISeqable
     (-seq [array] (array-seq array 0)))
+
+(set! *warn-on-infer* true)
 
 ;; * Markdown utility functions
 
@@ -112,7 +115,7 @@
 (defn markdown->html [wiki-root-dir markdown permalinks]
     (let [html-contents (->> markdown
                             str
-                            (.render markdown-renderer)
+                            (.render md)
                             (#(page/parse-wiki-links % permalinks))
                             (rewrite-image-paths wiki-root-dir)
                             (rewrite-external-links))]
@@ -174,7 +177,7 @@
          (let [{:keys [on-change contents]} (reagent/props this)
                node (reagent/dom-node this)
                ;; Adds syntax highlighting for [[Internal Links]]
-               token-fn (fn [stream state] 
+               token-fn (fn [^js/CodeMirror.StringStream stream state] 
                           (if-let [match (when (.match stream "[[")
                                            (loop [ch (.next stream)]
                                              (if (and (= ch "]") (= (.next stream) "]"))
@@ -204,7 +207,7 @@
            (swap! local-state assoc :editor editor)
            (swap! local-state assoc :value contents)
            (.on editor "change" 
-                (fn [instance change-obj]
+                (fn [^js/CodeMirror instance change-obj]
                   (let [new-value (.getValue instance)]
                     (swap! local-state assoc :value new-value)
                     (on-change new-value))))))})))

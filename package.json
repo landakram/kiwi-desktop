@@ -3,10 +3,12 @@
   "version": "0.0.1",
   "main": "resources/main.js",
   "devDependencies": {
+    "electron-packager": "^8.7.2",
     "electron-prebuilt": "^1.4.13"
   },
   "dependencies": {
     "electron-context-menu": "^0.9.1",
+    "electron-debug": "^1.2.0",
     "lunr": "^2.1.0",
     "markdown-it": "^8.3.1",
     "markdown-it-task-checkbox": "^1.0.4",

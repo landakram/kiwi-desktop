@@ -48,7 +48,7 @@
 
 (defn build-index [pages]
   (let [index (lunr (fn []
-                      (this-as this
+                      (this-as ^js/lunr.Index this
                         (.ref this "permalink")
                         (.field this "title")
                         (.field this "contents")

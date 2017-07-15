@@ -35,8 +35,8 @@
   [(path :route-state :page) (after channels/put-page-chan)]
   (fn [page [_ contents]]
     (-> page
-      (assoc-in [:contents] contents)
-      (assoc-in [:timestamp] (js/Date.)))))
+        (assoc-in [:contents] contents)
+        (assoc-in [:timestamp] (js/Date.)))))
 
 (reg-event-db
  :show-modal

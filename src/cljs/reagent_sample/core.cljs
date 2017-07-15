@@ -109,8 +109,17 @@
             classes (page/construct-classes permalink permalinks)
             class-str (string/join " " classes)]
         (set! (.-class node) class-str)))
-    nodes)
-  )
+    nodes))
+
+(defn attach-checkbox-handlers [html-node]
+  (let [nodes (.querySelectorAll html-node "input[type=checkbox]")]
+    (doseq [node nodes]
+      (set! (.-onclick node)
+            (fn [e]
+              (this-as this
+                (dispatch [:checkbox-toggle [(.-id this)]])
+                (.preventDefault e)))))
+    nodes))
 
 (defn markdown->html [wiki-root-dir markdown permalinks]
     (let [html-contents (->> markdown
@@ -342,12 +351,15 @@
          (let [node (reagent/dom-node this)]
            (js/window.renderMath)
            (rewrite-internal-links @permalinks node)
+           (attach-checkbox-handlers node)
+
            (highlight-code node)))
        :component-did-mount
        (fn [this]
          (let [node (reagent/dom-node this)]
            (js/window.renderMath)
            (rewrite-internal-links @permalinks node)
+           (attach-checkbox-handlers node)
            (highlight-code node)))})))
 
 

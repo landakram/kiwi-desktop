@@ -85,5 +85,11 @@
  (fn [db [_ page-title]]
    (let [permalink (page/get-permalink-from-title page-title)]
      (set-hash! (str "/page/" permalink))
-     (print db)
+     #_(print db)
      db)))
+
+(reg-event-db
+ :checkbox-toggle
+ (fn [db [_ [checkbox-id]]]
+   (js/console.log checkbox-id)
+   db))

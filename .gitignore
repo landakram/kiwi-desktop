@@ -9,8 +9,12 @@ pom.xml.asc
 /.lein-*
 /.nrepl-port
 /resources/public/js/app.js
+/resources/public/js/app.js.map
+/resources/public/js/app-release
+/resources/public/js/electron-release
 /resources/public/js/electron-dev
 /resources/public/js/out
+/Kiwi-darwin-*
 /out
 /.repl
 *.log
@@ -18,3 +22,4 @@ pom.xml.asc
 *.un~
 resources/main.js
 node_modules
+.DS_Store

@@ -1,6 +1,7 @@
 (ns kiwi.page
   (:require [clojure.string :as string]
-            [kiwi.utils :as utils]))
+            [kiwi.utils :as utils]
+            [kiwi.markdown-processors :as markdown-processors]))
 
 (defn capitalize-words [s]
   (->> (string/split (str s) #"\b")
@@ -53,10 +54,23 @@
             display-name
             "</a>")))))
 
+(defn extract-tags [ast]
+  (js/console.log ast)
+  (let [yaml-node (first
+                   (filter #(= "yaml" (:type %))
+                           (:children ast)))]
+    (get-in yaml-node [:data :parsedValue :tags])))
+
+(defn make-page [permalink contents modified-at]
+  (let [processor (markdown-processors/ast-processor [])
+        ast (markdown-processors/get-ast contents)]
+    {:title (get-title-from-permalink permalink)
+     :permalink permalink
+     :contents contents
+     :timestamp modified-at
+     :tags (extract-tags ast)
+     }))
 
 (defn new-page [permalink]
-  {:title (get-title-from-permalink permalink)
-   :permalink permalink
-   :contents ""
-   :timestamp (js/Date.)})
+  (make-page permalink "" (js/Date.)))
 

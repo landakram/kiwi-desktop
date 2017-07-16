@@ -5,6 +5,7 @@
             [kiwi.page :as page]
             [kiwi.storage :as storage]
             [kiwi.utils :as utils]
+            [kiwi.markdown-processors :as markdown-processors]
             [pushy.core :as pushy]
             [re-frame.core
              :as
@@ -42,10 +43,8 @@
   ; The second one puts the updated page on a chan, where subscribers can
   ; listen to it. This is used to save to localStorage / sync to dropbox.
   [(path :route-state :page) (after channels/put-page-chan)]
-  (fn [page [_ contents]]
-    (-> page
-        (assoc-in [:contents] contents)
-        (assoc-in [:timestamp] (js/Date.)))))
+  (fn [{:keys [permalink] :as page} [_ contents]]
+    (page/make-page permalink contents (js/Date.))))
 
 (reg-event-db
  :show-modal
@@ -97,19 +96,11 @@
      #_(print db)
      db)))
 
-(def markdown (js/require "remark-parse"))
-(def md-stringify (js/require "remark-stringify"))
-(def unified (js/require "unified"))
-(def task-list-plugin (js/require "remark-task-list"))
-(def ^js/unified md-processor (-> (unified)
-                      (.use markdown (clj->js {:gfm true :footnotes true :yaml true}))
-                      (.use md-stringify)))
 
 (reg-event-fx
  :checkbox-toggle
  (fn [{:keys [db] :as cofx} [_ [checkbox-id]]]
-   (let [processor (-> (md-processor)
-                       (.use task-list-plugin (clj->js {"toggle" [checkbox-id]})))
+   (let [processor (markdown-processors/checkbox-toggling-processor checkbox-id)
          old-content (get-in db [:route-state :page :contents])
          new-content (-> old-content
                          (processor.processSync)

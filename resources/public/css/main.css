@@ -6586,6 +6586,23 @@ img.emoji {
   margin-top: 0;
   color: #666; }
 
+.tags-list {
+  list-style: none;
+  margin-left: 0px;
+  padding-left: 0px; }
+  .tags-list li {
+    padding-right: 5px;
+    display: inline-block; }
+
+.tags-preview {
+  margin: 0 0;
+  padding: 0 0; }
+  .tags-preview li {
+    margin: 0 0;
+    padding: 0 0;
+    padding-right: 5px;
+    display: inline-block; }
+
 .task-list-item {
   list-style: none;
   margin-left: -20px; }

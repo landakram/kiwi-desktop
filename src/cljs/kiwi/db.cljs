@@ -95,10 +95,7 @@
                    (let [stat (.statSync fs path)
                          contents (str data)
                          modified-at (.-mtime stat)
-                         page {:title (page/get-title-from-permalink key)
-                               :permalink key
-                               :contents contents
-                               :timestamp modified-at}]
+                         page (page/make-page key contents modified-at)]
                      (put! ch page))
                    (put! ch :not-found))
                  (async/close! ch)))

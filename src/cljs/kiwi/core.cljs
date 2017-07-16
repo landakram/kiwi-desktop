@@ -1,3 +1,5 @@
+;; * Imports
+;; ** Clojurescript imports
 (ns kiwi.core
   (:require [cljs-time.coerce :as coerce]
             [cljs-time.format :as f]
@@ -19,7 +21,8 @@
             [re-frame.db :refer [app-db]]
             [reagent.core :as reagent]
             [reagent.session :as session]
-            [secretary.core :as secretary :include-macros true])
+            [secretary.core :as secretary :include-macros true]
+            [kiwi.markdown-processors :as markdown-processors])
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]]
    [reagent.ratom :refer [reaction]])
@@ -34,25 +37,6 @@
 (def dialog (.-dialog remote))
 (def lunr (js/require "lunr"))
 (set! (.-lunr js/window) lunr)
-
-(def Markdown (js/require "markdown-it"))
-
-(def md (Markdown.))
-(.use md (js/require "markdown-it-task-checkbox") (clj->js {:disabled false}))
-(set! (.-md js/window) md)
-
-(def markdown (js/require "remark-parse"))
-(def remark-to-rehype (js/require "remark-rehype"))
-(def fmt-html (js/require "rehype-format"))
-(def html (js/require "rehype-stringify"))
-(def unified (js/require "unified"))
-(def task-list-plugin (js/require "remark-task-list"))
-(def ^js/unified md-processor (-> (unified)
-                      (.use markdown (clj->js {:gfm true :footnotes true :yaml true}))
-                      (.use task-list-plugin (clj->js {}))
-                      (.use remark-to-rehype)
-                      (.use fmt-html)
-                      (.use html)))
 
 (extend-type js/NodeList
   ISeqable
@@ -125,14 +109,16 @@
     nodes))
 
 (defn markdown->html [wiki-root-dir markdown permalinks]
-    (let [html-contents (->> markdown
+  (let [processor (markdown-processors/html-processor permalinks)
+        html-contents (->> markdown
                             str
-                            (.processSync md-processor)
+                            (.processSync processor)
                             (.toString)
-                            (#(page/parse-wiki-links % permalinks))
                             (rewrite-image-paths wiki-root-dir)
                             (rewrite-external-links))]
+
     html-contents))
+
 
 
 (defn highlight-code [html-node]
@@ -388,11 +374,21 @@
      [:i.fa.fa-trash]
      " Delete"]))
 
+(def tags-enabled? false)
+
+(defn tags-list
+  ([opts tags]
+   (when tags-enabled?
+     [:ul
+      (merge {:className "tags-list"} opts)
+      (map (fn [tag] ^{:key tag} [:li (str "#" tag)]) tags)]))
+  ([tags]
+   (tags-list {} tags)))
 
 (defn wiki-page-contents [page]
   (let [editing (subscribe [:editing?])]
     (fn [page]
-      (let [{:keys [title contents]} @page] 
+      (let [{:keys [title contents tags]} @page] 
         [:div
          [:div.btn-group.pull-right
           (when @editing
@@ -401,6 +397,7 @@
           (if-not @editing
             [:article#page
              [:h1.post-title title]
+             [tags-list tags]
              [:article [markdown-content contents]]]
             [editor {:page page :editing @editing}])]))))
 
@@ -452,6 +449,7 @@
 
 (defn page-list-item [page]
   (let [title (:title page)
+        tags (:tags page)
         contents (:contents page)
         preview (->> (string/split contents #" ")
                      (take 20)
@@ -468,7 +466,8 @@
        [:span.page-date.float-xs-right date]]]
      [:div.row
       [:div.col-xs
-       [:p.page-preview (str preview "...")]]]]))
+       [:p.page-preview (str preview "...")]
+       [tags-list {:className "tags-preview"} tags]]]]))
 
 (defn search-page []
   (let [filtered-pages (subscribe [:filtered-pages])

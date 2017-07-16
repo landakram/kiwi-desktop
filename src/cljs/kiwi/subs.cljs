@@ -1,6 +1,7 @@
 (ns kiwi.subs
   (:require [kiwi.utils :as utils]
-            [re-frame.core :as re-frame :refer [reg-sub]])
+            [re-frame.core :as re-frame :refer [reg-sub]]
+            [kiwi.markdown-processors :as markdown-processors])
   (:require-macros [reagent.ratom :refer [reaction]]))
 
 (reg-sub 
@@ -52,6 +53,7 @@
                         (.ref this "permalink")
                         (.field this "title")
                         (.field this "contents")
+                        (.field this "tags")
 
                         (doseq [page pages]
                           (.add this (clj->js page))))))]
@@ -84,25 +86,9 @@
  filter-pages)
 
 
-
-
-
-#_(def markdown (js/require "remark-parse"))
-#_(def md-stringify (js/require "remark-stringify"))
-#_(def unified (js/require "unified"))
-#_(def task-list-plugin (js/require "remark-task-list"))
-#_(def md-processor (-> (unified)
-                      (.use markdown (clj->js {:gfm true :footnotes true :yaml true}))
-                      (.use md-stringify)))
-
-
-#_(reg-sub
+(reg-sub
  :current-page-ast
  :<- [:current-page]
- (fn [current-page]
-   (let [processor (-> (md-processor)
-                       (.use task-list-plugin (clj->js {})))]
-     (-> (:contents current-page)
-         (processor.parse)
-         (processor.runSync)
-         (js->clj)))))
+ :<- [:permalinks]
+ (fn [[  current-page permalinks]]
+   (markdown-processors/get-ast (:contents current-page))))

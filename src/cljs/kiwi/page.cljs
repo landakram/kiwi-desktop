@@ -68,8 +68,7 @@
      :permalink permalink
      :contents contents
      :timestamp modified-at
-     :tags (extract-tags ast)
-     }))
+     :tags (extract-tags ast)}))
 
 (defn new-page [permalink]
   (make-page permalink "" (js/Date.)))

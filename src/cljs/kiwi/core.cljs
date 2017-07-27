@@ -44,6 +44,10 @@
 
 (set! *warn-on-infer* true)
 
+;; * Feature flags
+
+(def tags-enabled? true)
+
 ;; * Markdown utility functions
 
 (defn path->filename [path]
@@ -139,12 +143,15 @@
 (secretary/defroute settings-route "/settings" []
   (dispatch [:navigate [:settings-page]]))
 
-(secretary/defroute search-route "/search" []
+(defn dispatch-search-page [filter]
   (go
     (let [pages (<! (page-db/load-all!))]
       (dispatch [:navigate [:search-page]
                  {:pages pages
-                  :filter ""}]))))
+                  :filter filter}]))))
+
+(secretary/defroute search-route "/search" [_ query-params]
+  (dispatch-search-page (get query-params :filter "")))
 
 (secretary/defroute page-route "/page/:permalink" [permalink]
   (go
@@ -287,6 +294,7 @@
                   [re-com/input-text
                    :model page-name
                    :width "auto"
+                   :attr {:auto-focus true}
                    :on-change #(reset! page-name %)
                    :change-on-blur? false
                    :placeholder "Name of the page"]
@@ -374,14 +382,19 @@
      [:i.fa.fa-trash]
      " Delete"]))
 
-(def tags-enabled? false)
 
 (defn tags-list
   ([opts tags]
    (when tags-enabled?
      [:ul
       (merge {:className "tags-list"} opts)
-      (map (fn [tag] ^{:key tag} [:li (str "#" tag)]) tags)]))
+      (map (fn [tag] ^{:key tag}
+             [:li
+              [re-com/hyperlink
+               :label (str "#" tag)
+               :on-click #(dispatch [:set-route (search-route
+                                                 {:query-params {:filter (str "tags:" tag)}})])]])
+           tags)]))
   ([tags]
    (tags-list {} tags)))
 
@@ -394,12 +407,12 @@
           (when @editing
             [delete-button page editing])
           [edit-button editing]]
-          (if-not @editing
-            [:article#page
-             [:h1.post-title title]
-             [tags-list tags]
-             [:article [markdown-content contents]]]
-            [editor {:page page :editing @editing}])]))))
+         (if-not @editing
+           [:article#page
+            [:h1.post-title title]
+            [tags-list tags]
+            [:article [markdown-content contents]]]
+           [editor {:page page :editing @editing}])]))))
 
 (defn base-layout [content]
   (let [modal (subscribe [:modal])]
@@ -553,10 +566,10 @@
     :handler toggle-editing!}
    {:key "g s"
     :keymap :local
-    :handler #(secretary/dispatch! (search-route))}
+    :handler #(dispatch [:set-route (search-route)])}
    {:key "g h"
     :keymap :local
-    :handler #(secretary/dispatch! (page-route {:permalink "home"}))}
+    :handler #(dispatch [:set-route (page-route {:permalink "home"})])}
    {:key "n"
     :keymap :local
     :handler dispatch-new-page!}
@@ -621,6 +634,6 @@
     (register-keybindings! keybindings)
 
     (if (not (nil? wiki-root-dir))
-      (secretary/dispatch! (page-route {:permalink "home"}))
-      (secretary/dispatch! (settings-route)))
+      (dispatch [:set-route (page-route {:permalink "home"})])
+      (dispatch [:set-route (settings-route)]))
     (render)))

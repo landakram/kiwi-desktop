@@ -28,7 +28,7 @@
 (defn checkbox-toggling-processor [checkbox-id]
   (-> (unified)
       (.use markdown (clj->js {:gfm true :footnotes true :yaml true}))
-      (.use md-stringify)
+      (.use md-stringify (clj->js {:listItemIndent "1"}))
       (.use task-list-plugin (clj->js {:toggle [checkbox-id]}))
       (.use wiki-link-plugin (clj->js {}))
       (.use yaml-plugin)))

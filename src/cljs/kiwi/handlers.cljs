@@ -89,12 +89,19 @@
 
 
 (reg-event-db
+(reg-event-fx
+ :set-route
+ (fn [{:keys [db] as :cofx} [_ path]]
+   (set-hash! path)
+   {:db db}))
+
+(reg-event-fx
  :create-page
- (fn [db [_ page-title]]
+ (fn [{:keys [db]} [_ page-title]]
    (let [permalink (page/get-permalink-from-title page-title)]
-     (set-hash! (str "/page/" permalink))
      #_(print db)
-     db)))
+     {:db db
+      :dispatch [:set-route (str "/page/" permalink)]})))
 
 
 (reg-event-fx

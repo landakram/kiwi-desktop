@@ -1,7 +1,8 @@
 (ns kiwi.subs
   (:require [kiwi.utils :as utils]
             [re-frame.core :as re-frame :refer [reg-sub]]
-            [kiwi.markdown-processors :as markdown-processors])
+            [kiwi.markdown-processors :as markdown-processors]
+            [clojure.string :as string])
   (:require-macros [reagent.ratom :refer [reaction]]))
 
 (reg-sub 
@@ -68,15 +69,23 @@
  (fn [pages _]
    (build-index pages)))
 
-(defn filter-pages [[ index pages filter-str] _]
-  (let [results (js->clj (.search index (str filter-str)))
-        permalinks (map #(get % "ref") results)
-        filtered-pages (filter #(utils/in? permalinks (:permalink %)) pages)]
+(defn valid-filter? [filter]
+  (and
+   (> (.-length (string/trim filter)) 0)
+   (not (.endsWith (string/trim filter) ":"))))
 
-    (if (> (.-length filter-str) 0)
-      filtered-pages
-      pages)
-    ))
+(defn search [index filter]
+  (if (valid-filter? filter)
+    (js->clj (.search index (str filter)))
+    []))
+
+(defn filter-pages [[ index pages filter-str] _]
+  (if (valid-filter? filter-str)
+    (let [results (search index filter-str)
+          permalinks (map #(get % "ref") results)
+          filtered-pages (filter #(utils/in? permalinks (:permalink %)) pages)]
+      filtered-pages)
+    pages))
 
 (reg-sub
  :filtered-pages

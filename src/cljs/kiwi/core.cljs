@@ -22,7 +22,9 @@
             [reagent.core :as reagent]
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
-            [kiwi.markdown-processors :as markdown-processors])
+            [kiwi.markdown-processors :as markdown-processors]
+            [cljs.core.async :as async]
+            [kiwi.google-calendar :as google-calendar])
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]]
    [reagent.ratom :refer [reaction]])
@@ -35,6 +37,8 @@
 (def shell (.-shell electron))
 (def remote (.-remote electron))
 (def dialog (.-dialog remote))
+(def sugar (js/require "sugar-date"))
+(set! (.-sugar js/window) sugar)
 (def lunr (js/require "lunr"))
 (set! (.-lunr js/window) lunr)
 
@@ -46,7 +50,8 @@
 
 ;; * Feature flags
 
-(def tags-enabled? true)
+(def schedule-enabled? false)
+(def tags-enabled? false)
 
 ;; * Markdown utility functions
 
@@ -91,16 +96,6 @@
         (set! (.-target link) "_blank")))
     (.-innerHTML el)))
 
-(defn rewrite-internal-links [permalinks html-node]
-  (let [nodes (.querySelectorAll html-node "a.internal")]
-    (doseq [node nodes]
-      (let [page-name (.-innerHTML node)
-            permalink (page/get-permalink-from-title page-name)
-            classes (page/construct-classes permalink permalinks)
-            class-str (string/join " " classes)]
-        (set! (.-class node) class-str)))
-    nodes))
-
 (defn attach-checkbox-handlers [html-node]
   (let [nodes (.querySelectorAll html-node "input[type=checkbox]")]
     (doseq [node nodes]
@@ -113,7 +108,7 @@
     nodes))
 
 (defn markdown->html [wiki-root-dir markdown permalinks]
-  (let [processor (markdown-processors/html-processor permalinks)
+  (let [^js/unified processor (markdown-processors/html-processor permalinks)
         html-contents (->> markdown
                             str
                             (.processSync processor)
@@ -236,7 +231,7 @@
   [:div#edit-container 
     [:div#edit
      [page-title-field page]
-     [page-content-field {:contents (:contents @page) 
+     [page-content-field {:contents @(subscribe [:edited-contents])
                           :on-change #(dispatch-sync [:page-edit %])}]]])
 
 (defn edit-button [editing]
@@ -342,9 +337,55 @@
                                                   (re-frame/dispatch [:hide-modal])
                                                   (.back js/window.history)))))]]]]]])))
 
+
+
+(defn schedule-page-form
+  "A form that lets a user specify a date and time to schedule a page"
+  []
+  (let [page (subscribe [:current-page])
+        date-string (reagent/atom "")]
+    (when (get @page :scheduled)
+      (reset! date-string
+              (-> (get @page :scheduled)
+                  (sugar.Date.)
+                  (.full)
+                  (.-raw)))
+      )
+    (fn []
+      [re-com/v-box
+       :gap "10px"
+       :width "400px"
+       :children [[:h3 "Schedule page"]
+                  [:p "Scheduling a page will add it as an event to Google Calendar."]
+                  [re-com/input-text
+                   :model date-string
+                   :width "auto"
+
+                   :on-change #(reset! date-string %)
+                   :attr {:auto-focus true}
+                   :change-on-blur? false
+                   :placeholder "3pm tomorrow"]
+                  [re-com/label
+                   :label
+                   (when-not (string/blank? @date-string)
+                     [:p [:i (str (sugar.Date.create @date-string))]])]
+                  [re-com/button
+                   :label "Schedule"
+                   :class "btn-success"
+                   :disabled? (= (str (sugar.Date.create @date-string)) "Invalid Date")
+                   :on-click (fn [_]
+                               (re-frame/dispatch [:schedule-page @page (sugar.Date.create @date-string)])
+                               (re-frame/dispatch [:hide-modal]))]]])))
+
+(defn schedule-page-modal []
+  [modal
+   [schedule-page-form]])
+
+
 (defmulti modals identity)
 (defmethod modals :add-page [] [add-page-modal])
 (defmethod modals :delete-page [] [delete-page-modal])
+(defmethod modals :schedule-page [] [schedule-page-modal])
 
 ;; ** Wiki Page
 
@@ -361,15 +402,12 @@
        (fn [this]
          (let [node (reagent/dom-node this)]
            (js/window.renderMath)
-           (rewrite-internal-links @permalinks node)
            (attach-checkbox-handlers node)
-
            (highlight-code node)))
        :component-did-mount
        (fn [this]
          (let [node (reagent/dom-node this)]
            (js/window.renderMath)
-           (rewrite-internal-links @permalinks node)
            (attach-checkbox-handlers node)
            (highlight-code node)))})))
 
@@ -382,6 +420,19 @@
      [:i.fa.fa-trash]
      " Delete"]))
 
+(defn schedule-button [js-start-date]
+  (fn [js-start-date]
+    (js/console.log js-start-date)
+    [:button.btn.btn-default {:on-click
+                             (fn [e]
+                               (dispatch [:show-modal :schedule-page]))}
+
+     [:i.fa.fa-calendar-plus-o]
+     (if (not (nil? js-start-date))
+       (str " " (-> js-start-date
+                              (sugar.Date.)
+                              (.full)))
+       " Schedule")]))
 
 (defn tags-list
   ([opts tags]
@@ -404,6 +455,9 @@
       (let [{:keys [title contents tags]} @page] 
         [:div
          [:div.btn-group.pull-right
+          (when schedule-enabled?
+            (js/console.log page)
+            [schedule-button (get @page :scheduled)])
           (when @editing
             [delete-button page editing])
           [edit-button editing]]
@@ -447,16 +501,38 @@
                                    on-directory-chosen))}
      "Set wiki location"]))
 
+(defn link-with-google-button
+  ([text]
+   [:button.btn.btn-default
+    {:on-click (fn [_]
+                 (go
+                   (let [token (async/<! (google-calendar/sign-in))]
+                     (dispatch [:assoc-google-access-token token]))))}
+    text])
+  ([] 
+   [link-with-google-button "Link with Google"]))
+
+
 (defn settings-page []
-  (let [wiki-root-dir (subscribe [:wiki-root-dir])]
+  (let [wiki-root-dir (subscribe [:wiki-root-dir])
+        google-access-token (subscribe [:google-access-token])]
     (fn []
       [base-layout
-       [:article#page
-        [:h1.post-title "Settings"]
-        [:h2 "Wiki location"]
-        (when (not (nil? @wiki-root-dir))
-          [:p [ :code @wiki-root-dir]])
-        [set-wiki-root-button]]])))
+       [:article#page.settings
+        [:section 
+         [:h1.post-title "Settings"]
+         [:h2 "Wiki location"]
+         (when (not (nil? @wiki-root-dir))
+           [:p [ :code @wiki-root-dir]])
+         [set-wiki-root-button]]
+        (when schedule-enabled?
+          [:section
+           [:h2 "Link with Google Calendar"]
+           (if @google-access-token
+             [:div 
+              [:p "Already linked with Google."]
+              [link-with-google-button "Re-link with Google"]]
+             [link-with-google-button])])]])))
 
 ;; ** Search
 
@@ -629,8 +705,11 @@
 (defn ^:export init []
   (enable-console-print!)
   (hook-browser-navigation!)
-  (let [wiki-root-dir (storage/load "wiki-root-dir")]
-    (dispatch-sync [:initialize {:wiki-root-dir wiki-root-dir}]) 
+  (let [wiki-root-dir (storage/load "wiki-root-dir")
+        google-access-token (storage/load "google-access-token")]
+    (dispatch-sync [:initialize
+                    {:wiki-root-dir wiki-root-dir
+                     :google-access-token google-access-token}]) 
     (register-keybindings! keybindings)
 
     (if (not (nil? wiki-root-dir))

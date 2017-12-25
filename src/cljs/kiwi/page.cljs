@@ -40,26 +40,26 @@
     ["internal"]
     ["internal" "new"]))
 
-(defn parse-wiki-links [html-content permalinks]
-  (string/replace
-   html-content
-   #"\[\[(.+?)\]\]"
-   (fn [[_ page-title]]
-     (let [[name display-name] (parse-page-title page-title)
-           permalink (get-permalink-from-title name)
-           classes (string/join " " (construct-classes permalink permalinks))]
-       (str "<a class=\" " classes "\" href=\""
-            "#" "/page/" permalink
-            "\">"
-            display-name
-            "</a>")))))
+(defn extract-yaml-node [ast]
+  (first
+   (filter #(= "yaml" (:type %))
+           (:children ast))))
 
 (defn extract-tags [ast]
-  (js/console.log ast)
-  (let [yaml-node (first
-                   (filter #(= "yaml" (:type %))
-                           (:children ast)))]
+  (let [yaml-node (extract-yaml-node ast)]
     (get-in yaml-node [:data :parsedValue :tags])))
+
+(defn extract-scheduled [ast]
+  (let [yaml-node (extract-yaml-node ast)
+        date (get-in yaml-node [:data :parsedValue :scheduled])]
+    (when date
+      (js/Date. date))))
+
+(defn extract-scheduled-id [ast]
+  (let [yaml-node (extract-yaml-node ast)
+        event-id (get-in yaml-node [:data :parsedValue :scheduled-id])]
+    event-id))
+
 
 (defn make-page [permalink contents modified-at]
   (let [processor (markdown-processors/ast-processor [])
@@ -68,6 +68,8 @@
      :permalink permalink
      :contents contents
      :timestamp modified-at
+     :scheduled (extract-scheduled ast)
+     :scheduled-id (extract-scheduled-id ast)
      :tags (extract-tags ast)}))
 
 (defn new-page [permalink]

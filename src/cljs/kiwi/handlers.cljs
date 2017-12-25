@@ -1,3 +1,4 @@
+;; * Imports / Utils
 (ns kiwi.handlers
   (:require [kiwi.channels :as channels]
             [kiwi.db :as page-db]
@@ -5,6 +6,7 @@
             [kiwi.page :as page]
             [kiwi.storage :as storage]
             [kiwi.utils :as utils]
+            [kiwi.google-calendar :as google-calendar]
             [kiwi.markdown-processors :as markdown-processors]
             [pushy.core :as pushy]
             [re-frame.core
@@ -12,10 +14,9 @@
              re-frame
              :refer
              [after enrich path reg-event-db reg-event-fx]]
-            [secretary.core :as secretary]))
-
-(defonce initial-state {:current-route [:home-page]
-                        :route-state {}})
+            [secretary.core :as secretary]
+            [cljs.core.async :as async])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (defn set-page-db-wiki-dir! [db]
   (page-db/set-wiki-dir! (:wiki-root-dir db)))
@@ -25,6 +26,10 @@
   [path]
   (set! (.-hash js/window.location) path))
 
+;; * Initialization
+
+(defonce initial-state {:current-route [:home-page]
+                        :route-state {}})
 
 (reg-event-db :initialize
   [(after set-page-db-wiki-dir!)]
@@ -36,15 +41,95 @@
   (js/console.log thing)
   thing)
 
-(reg-event-db :page-edit 
-  ; This vector is middleware. 
-  ; The first one scopes app-db to the :page, so that the handler function below 
-  ; it receives page instead of the full app-db.
-  ; The second one puts the updated page on a chan, where subscribers can
-  ; listen to it. This is used to save to localStorage / sync to dropbox.
-  [(path :route-state :page) (after channels/put-page-chan)]
-  (fn [{:keys [permalink] :as page} [_ contents]]
-    (page/make-page permalink contents (js/Date.))))
+;; * Page Editing
+
+(reg-event-db
+ :page-edit 
+ (path :route-state :edit-state)
+  (fn [edit-state [_ contents]]
+    (assoc edit-state :contents contents)))
+
+(def sugar (js/require "sugar-date"))
+
+(defn schedule-page! [page]
+  (let [token @(re-frame/subscribe [:google-access-token])
+        js-start-date (get page :scheduled)
+        event-id (get page :scheduled-id)]
+    (when (not (nil? js-start-date))
+      (go
+        ;; TODO: handle error
+        (let [result (if (nil? event-id)
+                       (async/<! (google-calendar/create-event
+                                  {:summary (:title page)
+                                   :description (:contents page)
+                                   :start {:dateTime js-start-date}
+                                   :end {:dateTime (-> (js/Date. js-start-date)
+                                                       (sugar.Date.)
+                                                       (.advance #js {:hours 1})
+                                                       (.-raw))}}
+                                  token))
+                       (async/<! (google-calendar/update-event
+                                  {:event-id event-id
+                                   :summary (:title page)
+                                   :description (:contents page)
+                                   :start {:dateTime js-start-date}
+                                   :end {:dateTime (-> (js/Date. js-start-date)
+                                                       (sugar.Date.)
+                                                       (.advance #js {:hours 1})
+                                                       (.-raw))}}
+                                  token)))]
+          (when (get result "accessTokens")
+            (re-frame/dispatch-sync [:assoc-google-access-token (get result "accessTokens")]))
+          (when (get result "id")
+            (re-frame/dispatch [:add-metadata page {:scheduled-id (get result "id")}])))))))
+
+(reg-event-db
+ :save-page
+ [(path :route-state :page)
+  (after channels/put-page-chan)
+  (after schedule-page!)]
+ (fn [{:keys [permalink] :as page} [_ edited-contents]]
+   (page/make-page permalink edited-contents (js/Date.))))
+
+(defn dissoc-in [db keys]
+  (update-in db (butlast keys) dissoc (last keys)))
+
+(reg-event-fx
+ :assoc-editing?
+ (fn [{:keys [db]} [_ editing?]]
+   (if editing?
+      {:db (-> db
+               (assoc-in [:route-state :editing?] editing?)
+               (assoc-in [:route-state :edit-state]
+                         {:contents (get-in db [:route-state :page :contents])}))}
+      {:db (-> db
+               (assoc-in [:route-state :editing?] editing?)
+               (dissoc-in [ :route-state :edit-state]))
+       :dispatch [:save-page
+                  (get-in db [:route-state :edit-state :contents])]})))
+  
+
+(reg-event-fx
+ :create-page
+ (fn [{:keys [db]} [_ page-title]]
+   (let [permalink (page/get-permalink-from-title page-title)]
+     #_(print db)
+     {:db db
+      :dispatch [:set-route (str "/page/" permalink)]})))
+
+(reg-event-fx
+ :checkbox-toggle
+ (fn [{:keys [db] :as cofx} [_ [checkbox-id]]]
+   (let [processor (markdown-processors/checkbox-toggling-processor checkbox-id)
+         page (get-in db [:route-state :page])
+         old-content (get-in page [:contents])
+         new-content (-> old-content
+                         (processor.processSync)
+                         (.toString))]
+     {:db db
+      :dispatch [:save-page new-content]})))
+
+;; * Modals
 
 (reg-event-db
  :show-modal
@@ -58,14 +143,7 @@
  (fn [route-state [_]]
    (dissoc route-state :modal)))
 
-(defn is-current-page [page [route-name path-arg]]
-    (and (= :wiki-page-view route-name) 
-         (= path-arg (:permalink page))))
-
-(reg-event-db
- :assoc-editing?
- (fn [db [_ editing?]]
-   (assoc-in db [:route-state :editing?] editing?)))
+;; * Navigation
 
 (reg-event-db
  :navigate 
@@ -74,11 +152,58 @@
        (assoc :current-route route)
        (assoc :route-state (or route-state {})))))
 
+(reg-event-fx
+ :set-route
+ (fn [{:keys [db] as :cofx} [_ path]]
+   (set-hash! path)
+   {:db db}))
+
+;; * Scheduling
+
+(reg-event-db
+ :assoc-google-access-token
+ [(after #(storage/save! "google-access-token" (:google-access-token %)))]
+ (fn [db [_ access-token]]
+   (assoc db :google-access-token access-token)))
+
+
+(reg-event-fx
+ :add-metadata
+ (fn [{ :keys [db]} [_ page metadata]]
+   (let [processor (markdown-processors/metadata-processor metadata)
+         page (get-in db [:route-state :page])
+         old-content (get-in page [:contents])
+         new-content (-> old-content
+                         (processor.processSync)
+                         (.toString))]
+     (if (= old-content new-content)
+       {:db db}
+       {:db db
+        :dispatch [:save-page new-content]}))))
+
+
+
+(reg-event-fx
+ :schedule-page
+ (fn [{:keys [db]} [_ page js-start-date]]
+   (let [processor (markdown-processors/scheduling-processor js-start-date)
+         page (get-in db [:route-state :page])
+         old-content (get-in page [:contents])
+         new-content (-> old-content
+                         (processor.processSync)
+                         (.toString))]
+     {:db db
+      :dispatch [:save-page new-content]})))
+
+;; * Searching
+
 (reg-event-db
  :assoc-search-filter
  (fn [db [_ filter]]
    (assoc-in db  [:route-state :filter] filter)))
 
+
+;; * Settings
 
 (reg-event-db
  :assoc-wiki-root-dir
@@ -87,30 +212,3 @@
  (fn [db [_ wiki-root-dir]]
    (assoc db :wiki-root-dir wiki-root-dir)))
 
-
-(reg-event-db
-(reg-event-fx
- :set-route
- (fn [{:keys [db] as :cofx} [_ path]]
-   (set-hash! path)
-   {:db db}))
-
-(reg-event-fx
- :create-page
- (fn [{:keys [db]} [_ page-title]]
-   (let [permalink (page/get-permalink-from-title page-title)]
-     #_(print db)
-     {:db db
-      :dispatch [:set-route (str "/page/" permalink)]})))
-
-
-(reg-event-fx
- :checkbox-toggle
- (fn [{:keys [db] :as cofx} [_ [checkbox-id]]]
-   (let [processor (markdown-processors/checkbox-toggling-processor checkbox-id)
-         old-content (get-in db [:route-state :page :contents])
-         new-content (-> old-content
-                         (processor.processSync)
-                         (.toString))]
-     {:db db
-      :dispatch [:page-edit new-content]})))

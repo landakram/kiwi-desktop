@@ -2,7 +2,7 @@
   (:require [tailrecursion.cljson :refer [clj->cljson cljson->clj]]))
 
 (defn save! [key data]
-  (println "(save)" key)
+  (println "(save)" key data)
   (.setItem js/localStorage (name key) (clj->cljson data)))
 
 (defn load [key]

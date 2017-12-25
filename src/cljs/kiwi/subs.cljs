@@ -36,6 +36,11 @@
    (get-in db [:wiki-root-dir])))
 
 (reg-sub
+ :google-access-token
+ (fn [db _]
+   (get-in db [:google-access-token])))
+
+(reg-sub
  :modal
  (fn [db _]
    (get-in db [:route-state :modal])))
@@ -101,3 +106,8 @@
  :<- [:permalinks]
  (fn [[  current-page permalinks]]
    (markdown-processors/get-ast (:contents current-page))))
+
+(reg-sub
+ :edited-contents
+ (fn [db _]
+   (get-in db [:route-state :edit-state :contents])))

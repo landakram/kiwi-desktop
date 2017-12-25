@@ -22,3 +22,8 @@
   (let [out (chan 1 xform)]
     (pipe in out)
     out))
+
+(defn p-r [thing]
+  (js/console.log thing)
+  thing)
+

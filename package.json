@@ -9,6 +9,8 @@
   "dependencies": {
     "electron-context-menu": "^0.9.1",
     "electron-debug": "^1.2.0",
+    "electron-google-auth": "^0.0.1",
+    "googleapis": "^23.0.0",
     "lunr": "^2.1.0",
     "markdown-it": "^8.3.1",
     "markdown-it-task-checkbox": "^1.0.4",
@@ -19,9 +21,12 @@
     "rehype-stringify": "^3.0.0",
     "remark": "^7.0.1",
     "remark-parse": "^3.0.1",
+    "remark-parse-yaml": "^0.0.1",
     "remark-rehype": "^2.0.1",
     "remark-stringify": "^3.0.1",
-    "remark-task-list": "0.0.2",
+    "remark-task-list": "^0.0.1",
+    "remark-wiki-link": "^0.0.1",
+    "sugar-date": "^2.0.4",
     "unified": "^6.1.5"
   }
 }

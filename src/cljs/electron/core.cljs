@@ -43,3 +43,12 @@
                                 (.quit app)))
 
 (.on app "ready" init-browser)
+
+(.on app "open-url" (fn [e url]
+                      (.preventDefault e)
+                      (.executeJavascript
+                       (.-webContents @main-window)
+                       (str "console.log('" url "')"))
+                      (js/console.log url)))
+
+

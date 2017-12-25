@@ -15,7 +15,7 @@
 
 
 (def page-chan (chan))
-(def page-changes (debounce page-chan 3000))
+(def page-changes page-chan)
 
 (defn put-page-chan [page] 
   (put! page-chan page))

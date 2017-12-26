@@ -1,10 +1,9 @@
-(ns kiwi.storage
-  (:require [tailrecursion.cljson :refer [clj->cljson cljson->clj]]))
+(ns kiwi.storage)
 
 (defn save! [key data]
   (println "(save)" key data)
-  (.setItem js/localStorage (name key) (clj->cljson data)))
+  (.setItem js/localStorage (name key) (clj->js data)))
 
 (defn load [key]
   (println "(load)" key)
-  (cljson->clj (.getItem js/localStorage (name key))))
+  (js->clj (.getItem js/localStorage (name key))))

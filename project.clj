@@ -21,7 +21,6 @@
                  [re-frame "0.9.4"]
                  [day8.re-frame/test "0.1.5"]
                  [re-com "1.0.0"]
-                 [tailrecursion/cljson "1.0.7"]
                  [secretary "1.2.3"]
                  [com.andrewmcveigh/cljs-time "0.5.0"]
                  [binaryage/devtools "0.9.4"]]

@@ -46,8 +46,6 @@
   ISeqable
     (-seq [array] (array-seq array 0)))
 
-(set! *warn-on-infer* true)
-
 ;; * Feature flags
 
 (def schedule-enabled? false)
@@ -703,6 +701,7 @@
 
 (defn ^:export init []
   (enable-console-print!)
+  (set! *warn-on-infer* true)
   (hook-browser-navigation!)
   (let [wiki-root-dir (storage/load "wiki-root-dir")
         google-access-token (storage/load "google-access-token")]

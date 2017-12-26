@@ -1,4 +1,4 @@
-# Kiwi Web
+# Kiwi Desktop
 
 ## Local development
 

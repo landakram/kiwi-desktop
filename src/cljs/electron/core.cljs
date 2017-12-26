@@ -34,10 +34,13 @@
 
   #_(.openDevTools (.-webContents ^js/electron.BrowserWindow @main-window))
 
-  (.on ^js/electron.WebContents (.-webContents ^js/electron.BrowserWindow @main-window) "new-window" (fn [event url]
-                                                   (.preventDefault event)
-                                                   (open url)))
-  (.on ^js/electron.BrowserWindow @main-window "closed" #(reset! main-window nil)))
+  (.on ^js/electron.WebContents (.-webContents ^js/electron.BrowserWindow @main-window)
+       "new-window" (fn [event url]
+                      (.preventDefault event)
+                      (open url)))
+
+  (.on ^js/electron.BrowserWindow @main-window
+       "closed" #(reset! main-window nil)))
 
 (.on app "window-all-closed" #(when-not (= js/process.platform "darwin")
                                 (.quit app)))

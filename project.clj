@@ -78,6 +78,7 @@
                                        :optimizations :advanced
                                        :cache-analysis true
                                        :infer-externs true
+                                       :externs ["externs.js"]
                                        :source-map    "resources/public/js/app.js.map"
                                        :pretty-print  true}}
                        {:id "electron-release"

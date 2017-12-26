@@ -2,7 +2,27 @@
   "name": "Kiwi",
   "version": "0.0.1",
   "main": "resources/main.js",
+  "build": {
+    "appId": "com.markhudnall.kiwi",
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "protocols": [
+      {
+        "name": "Kiwi",
+        "role": "Viewer",
+        "schemes": [
+          "kiwi"
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "pack": "electron-builder --dir",
+    "dist": "lein clean && lein cljsbuild once release electron-release && electron-builder"
+  },
   "devDependencies": {
+    "electron-builder": "^19.6.3",
     "electron-packager": "^8.7.2",
     "electron-prebuilt": "^1.4.13"
   },
@@ -10,6 +30,7 @@
     "electron-context-menu": "^0.9.1",
     "electron-debug": "^1.2.0",
     "electron-google-auth": "^0.0.1",
+    "electron-oauth2": "^3.0.0",
     "googleapis": "^23.0.0",
     "lunr": "^2.1.0",
     "markdown-it": "^8.3.1",

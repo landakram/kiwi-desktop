@@ -81,8 +81,6 @@
         (doseq [img img-nodes]
           (let [src (.-src img)
                 path (img-tag->path root-dir img)]
-            ; If the image is a local one
-            ; Check the img cache to see if we already have a object URL for it
             (when (is-local-img src)
               (set! (.-src img) path))))
         (.-innerHTML el)))

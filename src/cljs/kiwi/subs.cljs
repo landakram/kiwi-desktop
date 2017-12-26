@@ -2,6 +2,7 @@
   (:require [kiwi.utils :as utils]
             [re-frame.core :as re-frame :refer [reg-sub]]
             [kiwi.markdown-processors :as markdown-processors]
+            [kiwi.editor.subs]
             [clojure.string :as string])
   (:require-macros [reagent.ratom :refer [reaction]]))
 
@@ -64,7 +65,6 @@
                         (doseq [page pages]
                           (.add this (clj->js page))))))]
     (print "rebuilding index")
-    #_(set! (.-index js/window) index)
     index))
 
 
@@ -107,7 +107,3 @@
  (fn [[  current-page permalinks]]
    (markdown-processors/get-ast (:contents current-page))))
 
-(reg-sub
- :edited-contents
- (fn [db _]
-   (get-in db [:route-state :edit-state :contents])))

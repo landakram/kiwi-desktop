@@ -27,3 +27,5 @@
   (js/console.log thing)
   thing)
 
+(defn dissoc-in [db keys]
+  (update-in db (butlast keys) dissoc (last keys)))

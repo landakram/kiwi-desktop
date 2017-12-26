@@ -40,7 +40,6 @@
                    (put! ch result)))))
     ch))
 
-;; db.pages.toCollection().reverse().sortBy("timestamp").then(p);
 (defn readdir [path]
   (let [ch (chan)]
     (.readdir fs
@@ -56,19 +55,6 @@
 (defn path->permalink [path]
   (first (string/split path ".")))
 
-
-#_(defn load-permalinks []
-  (let [in (readdir (str @wiki-dir "/" wiki-rel-path))
-        out (async/chan 1 (comp
-                           (filter markdown-file?)
-                           (map path->permalink)))]
-    (go-loop []
-      (let [filename (<! in)]
-        (when filename
-          (>! out filename)
-          (recur))))
-    out))
-
 (defn load-permalinks []
   (let [in (readdir (str @wiki-dir "/" wiki-rel-path))
         out (async/chan 1 (comp
@@ -76,14 +62,6 @@
                            (map path->permalink)))]
     (async/pipe in out)
     (async/into [] out)))
-
-#_(let [ch (load-permalinks)]
-  (println "running permalinks go-loop")
-  (go-loop []
-    (let [p (<! ch)]
-      (when p
-        (println p)
-        (recur)))))
 
 (defn load [key]
   (let [ch (chan)
@@ -100,7 +78,6 @@
                    (put! ch :not-found))
                  (async/close! ch)))
     ch))
-
 
 (defn collect [ch]
   (async/reduce conj [] ch))
@@ -128,16 +105,6 @@
         (recur (<! ch))))
     out))
 
-#_(let [ch (load-all!)]
-  (println "running pages go-loop")
-  (go-loop []
-    (let [p (<! ch)]
-      (println "got p")
-      (when p
-        (println p)
-        (recur)))))
- 
-
 (defn save! [{:keys [permalink contents] :as page}]
   (let [ch (chan)
         path (str @wiki-dir "/" wiki-rel-path permalink ".md")]
@@ -157,10 +124,3 @@
                (print err)
                (put! ch :deleted)))
     ch))
-
-
-
-#_{:title (get-title-from-permalink permalink)
-   :permalink permalink
-   :contents ""
-   :timestamp (js/Date.)}

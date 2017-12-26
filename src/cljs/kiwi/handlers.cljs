@@ -7,6 +7,7 @@
             [kiwi.utils :as utils]
             [kiwi.google-calendar :as google-calendar]
             [kiwi.markdown-processors :as markdown-processors]
+            [kiwi.editor.events]
             [pushy.core :as pushy]
             [re-frame.core
              :as
@@ -41,12 +42,6 @@
   thing)
 
 ;; * Page Editing
-
-(reg-event-db
- :page-edit 
- (path :route-state :edit-state)
-  (fn [edit-state [_ contents]]
-    (assoc edit-state :contents contents)))
 
 (def sugar (js/require "sugar-date"))
 
@@ -94,29 +89,10 @@
  (fn [{:keys [permalink] :as page} [_ edited-contents]]
    (page/make-page permalink edited-contents (js/Date.))))
 
-(defn dissoc-in [db keys]
-  (update-in db (butlast keys) dissoc (last keys)))
-
-(reg-event-fx
- :assoc-editing?
- (fn [{:keys [db]} [_ editing?]]
-   (if editing?
-      {:db (-> db
-               (assoc-in [:route-state :editing?] editing?)
-               (assoc-in [:route-state :edit-state]
-                         {:contents (get-in db [:route-state :page :contents])}))}
-      {:db (-> db
-               (assoc-in [:route-state :editing?] editing?)
-               (dissoc-in [ :route-state :edit-state]))
-       :dispatch [:save-page
-                  (get-in db [:route-state :edit-state :contents])]})))
-  
-
 (reg-event-fx
  :create-page
  (fn [{:keys [db]} [_ page-title]]
    (let [permalink (page/get-permalink-from-title page-title)]
-     #_(print db)
      {:db db
       :dispatch [:set-route (str "/page/" permalink)]})))
 

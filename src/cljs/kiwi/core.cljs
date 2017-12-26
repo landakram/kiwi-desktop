@@ -439,7 +439,8 @@
       (merge {:className "tags-list"} opts)
       (map (fn [tag] ^{:key tag}
              [:li
-              [re-com/hyperlink
+              [re-com/button
+               :class "btn-tag"
                :label (str "#" tag)
                :on-click #(dispatch [:set-route (search-route
                                                  {:query-params {:filter (str "tags:" tag)}})])]])

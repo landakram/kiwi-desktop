@@ -1,3 +1,4 @@
+$neutral-color: #E4E4E4;
 
 html, body {
     box-sizing: border-box;
@@ -339,6 +340,44 @@ img.emoji {
     outline: none;
 }
 
+.btn-tag {
+  border: 1px solid $neutral-color;
+  border-radius: 5;
+    color: lighten($gray-light, 20%);
+    background-color: $neutral-color;
+    outline: none;
+    padding: 3px 5px;
+    font-weight: bold;
+}
+
+.btn-tag:focus {
+  border: 1px solid $neutral-color;
+  color: $neutral-color;
+    background: rgba(0,0,0,0.0);
+    outline: none;
+}
+.btn-tag:hover{
+    border: 1px solid $neutral-color;
+  background-color: $neutral-color;
+    color: lighten($gray-light, 10%);
+    cursor: pointer;
+}
+.btn-tag:active {
+    border: 1px solid $neutral-color;
+  background-color: $neutral-color;
+  color: $gray-light;
+    cursor: pointer;
+    outline: none;
+}
+
+.btn-tag:active:hover {
+    border: 1px solid $neutral-color;
+  background-color: $neutral-color;
+  color: $gray-light;
+    cursor: pointer;
+    outline: none;
+}
+
 .modal {
     display: block;
 }
@@ -346,3 +385,11 @@ img.emoji {
 .settings section {
     margin-bottom: 20px;
 }
+
+blockquote {
+    border-left: 4px solid #eeeeee;
+    padding-left: 20px;
+    color: #555;
+}
+
+

@@ -6,3 +6,8 @@
  :edited-contents
  (fn [db _]
    (get-in db [:route-state :edit-state :contents])))
+
+(reg-sub
+ :editing?
+ (fn [db _]
+   (get-in db [:route-state :editing?])))

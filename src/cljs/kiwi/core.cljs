@@ -8,7 +8,7 @@
             [kiwi.db :as page-db]
             [kiwi.handlers :as handlers]
             [kiwi.history :refer [history]]
-            [kiwi.page :as page]
+            [kiwi.page.core :as page]
             [kiwi.storage :as storage]
             [kiwi.subs :as subs]
             [kiwi.utils :as utils]
@@ -16,6 +16,8 @@
             [kiwi.editor.views]
             [kiwi.search.views]
             [kiwi.settings.views]
+            [kiwi.page.views]
+            [kiwi.page.modals]
             [kiwi.views :as views]
             [kiwi.routes :as routes]
             [pushy.core :as pushy]
@@ -35,200 +37,10 @@
 ;; ** JavaScript imports
 
 (def mousetrap (js/require "mousetrap"))
-(def sugar (js/require "sugar-date"))
-(set! (.-sugar js/window) sugar)
-(def lunr (js/require "lunr"))
-(set! (.-lunr js/window) lunr)
 
 (extend-type js/NodeList
   ISeqable
     (-seq [array] (array-seq array 0)))
-
-;; * Feature flags
-
-;; * Markdown utility functions
-
-(defn path->filename [path]
-  (-> path
-      (string/split "/")
-      last))
-
-(defn create-dummy-node [html-contents]
-  (let [el (.createElement js/document "div")]
-    (set! (.-innerHTML el) html-contents)
-    el))
-
-(defn img-tag->path [root-dir img-tag]
-  (let [src (string/lower-case (.-src img-tag))
-        filename (path->filename src)
-        path (str root-dir "/" page-db/img-rel-path filename)]
-    path))
-
-(defn is-local-img [src]
-  (.startsWith src "file://"))
-
-(defn rewrite-image-paths [root-dir html-contents]
-  "Rewrite relative image paths like 'img/foo.jpg' to {root-dir}/public/img/foo.jpg"
-  (let [el (create-dummy-node html-contents)
-        img-nodes (.querySelectorAll el "img")]
-        (doseq [img img-nodes]
-          (let [src (.-src img)
-                path (img-tag->path root-dir img)]
-            (when (is-local-img src)
-              (set! (.-src img) path))))
-        (.-innerHTML el)))
-
-(defn rewrite-external-links [html-contents]
-  "Rewrite external links to open in a new window. Electron is set up to open these in the default browser."
-  (let [el (create-dummy-node html-contents)
-        links (.querySelectorAll el "a:not(.internal)")]
-    (doseq [link links]
-      (let [href (.-href link)]
-        (set! (.-target link) "_blank")))
-    (.-innerHTML el)))
-
-(defn attach-checkbox-handlers [html-node]
-  (let [nodes (.querySelectorAll html-node "input[type=checkbox]")]
-    (doseq [node nodes]
-      (set! (.-disabled node) false)
-      (set! (.-onclick node)
-            (fn [e]
-              (this-as this
-                (dispatch [:checkbox-toggle [(.-id (.-parentNode this))]])
-                (.preventDefault e)))))
-    nodes))
-
-(defn markdown->html [wiki-root-dir markdown permalinks]
-  (let [^js/unified processor (markdown-processors/html-processor permalinks)
-        html-contents (->> markdown
-                            str
-                            (.processSync processor)
-                            (.toString)
-                            (rewrite-image-paths wiki-root-dir)
-                            (rewrite-external-links))]
-
-    html-contents))
-
-(defn highlight-code [html-node]
-  (let [nodes (.querySelectorAll html-node "pre code")]
-    (loop [i (.-length nodes)]
-      (when-not (neg? i)
-        (when-let [item (.item nodes i)]
-          (.highlightBlock js/hljs item))
-        (recur (dec i))))))
-
-;; * Routes
-
-;; * Views
-;; ** Editor
-
-(defn edit-button [editing]
-  [:button.edit-button.btn.btn-default
-   {:on-click (fn [] (dispatch [:assoc-editing?  (not @editing)]))} 
-   (if-not @editing
-     [:i.fa.fa-pencil]
-     [:i.fa.fa-check])
-   (if-not @editing
-     " Edit"
-     " Done")])
-
-(defn close-button [on-click]
-  [:button.close {:on-click on-click
-                  :dangerouslySetInnerHTML {:__html "<span>&times;</span>"}}])
-
-;; ** Navigation bar
-
-;; ** Modals
-
-;; ** Wiki Page
-
-(defn markdown-content [content]
-  (let [wiki-root-dir (subscribe [:wiki-root-dir])
-        permalinks (subscribe [:permalinks])]
-    (reagent/create-class
-      {:reagent-render 
-       (fn [content]
-         [:div
-          {:dangerouslySetInnerHTML
-           {:__html (markdown->html @wiki-root-dir content @permalinks)}}])
-       :component-did-update
-       (fn [this]
-         (let [node (reagent/dom-node this)]
-           (js/window.renderMath)
-           (attach-checkbox-handlers node)
-           (highlight-code node)))
-       :component-did-mount
-       (fn [this]
-         (let [node (reagent/dom-node this)]
-           (js/window.renderMath)
-           (attach-checkbox-handlers node)
-           (highlight-code node)))})))
-
-
-(defn delete-button [page editing]
-  (fn [page]
-    [:button.btn.btn-danger {:on-click
-                             (fn [e]
-                               (dispatch [:show-modal :delete-page]))}
-     [:i.fa.fa-trash]
-     " Delete"]))
-
-(defn schedule-button [js-start-date]
-  (fn [js-start-date]
-    (js/console.log js-start-date)
-    [:button.btn.btn-default {:on-click
-                             (fn [e]
-                               (dispatch [:show-modal :schedule-page]))}
-
-     [:i.fa.fa-calendar-plus-o]
-     (if (not (nil? js-start-date))
-       (str " " (-> js-start-date
-                              (sugar.Date.)
-                              (.full)))
-       " Schedule")]))
-
-(defn tags-list
-  ([opts tags]
-   (when features/tags-enabled?
-     [:ul
-      (merge {:className "tags-list"} opts)
-      (map (fn [tag] ^{:key tag}
-             [:li
-              [re-com/button
-               :class "btn-tag"
-               :label (str "#" tag)
-               :on-click #(dispatch [:set-route (routes/search-route
-                                                 {:query-params {:filter (str "tags:" tag)}})])]])
-           tags)]))
-  ([tags]
-   (tags-list {} tags)))
-
-(defn wiki-page-contents [page]
-  (let [editing (subscribe [:editing?])]
-    (fn [page]
-      (let [{:keys [title contents tags]} @page] 
-        [:div
-         [:div.btn-group.pull-right
-          (when features/schedule-enabled?
-            (js/console.log page)
-            [schedule-button (get @page :scheduled)])
-          (when @editing
-            [delete-button page editing])
-          [edit-button editing]]
-         (if-not @editing
-           [:article#page
-            [:h1.post-title title]
-            [tags-list tags]
-            [:article [markdown-content contents]]]
-           [kiwi.editor.views.editor {:page page :editing @editing}])]))))
-
-(defn wiki-page []
-  (let [page (subscribe [:current-page])]
-    (reagent/create-class
-     {:reagent-render 
-      (fn []
-        [views/base-layout
-         [wiki-page-contents page]])})))
 
 ;; ** Home page
 
@@ -246,7 +58,7 @@
   [home-page])
 
 (defmethod page :wiki-page-view [_ _]
-  [wiki-page])
+  [kiwi.page.views.wiki-page])
 
 (defmethod page :settings-page [_ _]
   [kiwi.settings.views.settings-page])

@@ -1,4 +1,4 @@
-(ns kiwi.page
+(ns kiwi.page.core
   (:require [clojure.string :as string]
             [kiwi.utils :as utils]
             [kiwi.markdown-processors :as markdown-processors]))
@@ -74,4 +74,5 @@
 
 (defn new-page [permalink]
   (make-page permalink "" (js/Date.)))
+
 

@@ -5,22 +5,8 @@
             [kiwi.editor.subs]
             [kiwi.search.subs]
             [kiwi.settings.subs]
+            [kiwi.page.subs]
             [clojure.string :as string]))
-
-(reg-sub
- :permalinks
- (fn [db _]
-   (get-in db [:route-state :permalinks])))
-
-(reg-sub
- :editing?
- (fn [db _]
-   (get-in db [:route-state :editing?])))
-
-(reg-sub
- :current-page
- (fn [db _]
-   (get-in db [:route-state :page])))
 
 (reg-sub
  :modal
@@ -31,11 +17,3 @@
  :current-route 
  (fn [db _] 
    (get-in db [:current-route])))
-
-(reg-sub
- :current-page-ast
- :<- [:current-page]
- :<- [:permalinks]
- (fn [[  current-page permalinks]]
-   (markdown-processors/get-ast (:contents current-page))))
-

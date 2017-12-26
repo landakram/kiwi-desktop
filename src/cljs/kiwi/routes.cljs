@@ -1,6 +1,6 @@
 (ns kiwi.routes
   (:require [secretary.core :as secretary :include-macros true]
-            [kiwi.page :as page]
+            [kiwi.page.core :as page]
             [re-frame.core :as re-frame :refer [after dispatch dispatch-sync enrich path register-handler register-sub subscribe]]
             [kiwi.db :as page-db])
   (:require-macros

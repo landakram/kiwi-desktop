@@ -9,23 +9,6 @@
             [kiwi.routes :as routes]
             [kiwi.views :as views]))
 
-;; TODO: duplicated in core.cljs
-(defn tags-list
-  ([opts tags]
-   (when features/tags-enabled?
-     [:ul
-      (merge {:className "tags-list"} opts)
-      (map (fn [tag] ^{:key tag}
-             [:li
-              [re-com/button
-               :class "btn-tag"
-               :label (str "#" tag)
-               :on-click #(dispatch [:set-route (routes/search-route
-                                                 {:query-params {:filter (str "tags:" tag)}})])]])
-           tags)]))
-  ([tags]
-   (tags-list {} tags)))
-
 (defn page-list-item [page]
   (let [title (:title page)
         tags (:tags page)
@@ -46,7 +29,7 @@
      [:div.row
       [:div.col-xs
        [:p.page-preview (str preview "...")]
-       [tags-list {:className "tags-preview"} tags]]]]))
+       [views/tags-list {:className "tags-preview"} tags]]]]))
 
 (defn search-page []
   (let [filtered-pages (subscribe [:filtered-pages])

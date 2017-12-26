@@ -1,7 +1,7 @@
 (ns kiwi.db
   (:require [cljs.core.async :as async :refer [<! >! chan put! take!]]
             [clojure.string :as string]
-            [kiwi.page :as page] 
+            [kiwi.page.core :as page] 
             [kiwi.utils :as utils])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 

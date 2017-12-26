@@ -7,7 +7,6 @@
             [clojure.string :as string]
             [goog.events :as events]
             [goog.history.EventType :as HistoryEventType]
-            [kiwi.channels :as channels]
             [kiwi.db :as page-db]
             [kiwi.handlers :as handlers]
             [kiwi.history :refer [history]]
@@ -677,17 +676,6 @@
     (cond
       (= keymap :local) (.bind mousetrap key handler)
       (= keymap :global) (.bindGlobal mousetrap key handler))))
-
-#_(register-keybindings! keybindings)
-
-;; * Page channel loop
-
-; Save updated pages to localStorage
-(go-loop []
-  (let [page (<! channels/page-changes)]
-    (when page
-      (page-db/save! page)
-      (recur))))
 
 ;; * Main
 

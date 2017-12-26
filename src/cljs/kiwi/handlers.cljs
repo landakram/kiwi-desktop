@@ -1,7 +1,6 @@
 ;; * Imports / Utils
 (ns kiwi.handlers
-  (:require [kiwi.channels :as channels]
-            [kiwi.db :as page-db]
+  (:require [kiwi.db :as page-db]
             [kiwi.history :refer [history]]
             [kiwi.page :as page]
             [kiwi.storage :as storage]
@@ -83,10 +82,14 @@
           (when (get result "id")
             (re-frame/dispatch [:add-metadata page {:scheduled-id (get result "id")}])))))))
 
+
+(defn save-page! [page]
+  (page-db/save! page))
+
 (reg-event-db
  :save-page
  [(path :route-state :page)
-  (after channels/put-page-chan)
+  (after save-page!)
   (after schedule-page!)]
  (fn [{:keys [permalink] :as page} [_ edited-contents]]
    (page/make-page permalink edited-contents (js/Date.))))

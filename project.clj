@@ -42,6 +42,7 @@
                                     "resources/public/js/electron-dev"]
 
   :source-paths ["src/clj" "src/cljc" "src/cljs"]
+  :test-paths ["test/cljs"]
 
   :minify-assets
   {:assets
@@ -51,7 +52,11 @@
                  :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
   :cljsbuild {:builds [{:id           "dev"
-                        :source-paths ["src/clj" "src/cljs/kiwi" "src/cljc" "env/dev/cljs"]
+                        :source-paths ["src/clj"
+                                       "src/cljs"
+                                       "src/cljc"
+                                       "env/dev/cljs"
+                                       "test/cljs"]
                         :figwheel     {:on-jsload "kiwi.core/render"}
                         :compiler     {:output-to     "resources/public/js/app.js"
                                        :output-dir    "resources/public/js/out"

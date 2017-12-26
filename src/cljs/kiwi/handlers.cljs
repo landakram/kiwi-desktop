@@ -41,11 +41,13 @@
 
 ;; * Modals
 
+(defn show-modal [route-state [_ modal-id]]
+   (assoc route-state :modal modal-id))
+
 (reg-event-db
  :show-modal
  (path :route-state)
- (fn [route-state [_ modal-id]]
-   (assoc route-state :modal modal-id)))
+ show-modal)
 
 (reg-event-db
  :hide-modal

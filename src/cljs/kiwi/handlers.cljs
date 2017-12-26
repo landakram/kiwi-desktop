@@ -9,6 +9,7 @@
             [kiwi.markdown-processors :as markdown-processors]
             [kiwi.editor.events]
             [kiwi.search.events]
+            [kiwi.settings.events]
             [pushy.core :as pushy]
             [re-frame.core
              :as
@@ -18,9 +19,6 @@
             [secretary.core :as secretary]
             [cljs.core.async :as async])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
-
-(defn set-page-db-wiki-dir! [db]
-  (page-db/set-wiki-dir! (:wiki-root-dir db)))
 
 (defn- set-hash!
   "Set the browser's location hash."
@@ -33,7 +31,7 @@
                         :route-state {}})
 
 (reg-event-db :initialize
-  [(after set-page-db-wiki-dir!)]
+  [(after kiwi.settings.events.set-page-db-wiki-dir!)]
   (fn [db [_ state]]
     ; Use initial-state as a default, but keep anything already in db
     (merge initial-state db (or state {}))))
@@ -176,11 +174,4 @@
       :dispatch [:save-page new-content]})))
 
 ;; * Settings
-
-(reg-event-db
- :assoc-wiki-root-dir
- [(after #(storage/save! "wiki-root-dir" (:wiki-root-dir %)))
-  (after set-page-db-wiki-dir!)]
- (fn [db [_ wiki-root-dir]]
-   (assoc db :wiki-root-dir wiki-root-dir)))
 

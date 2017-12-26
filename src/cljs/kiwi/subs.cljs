@@ -4,6 +4,7 @@
             [kiwi.markdown-processors :as markdown-processors]
             [kiwi.editor.subs]
             [kiwi.search.subs]
+            [kiwi.settings.subs]
             [clojure.string :as string]))
 
 (reg-sub
@@ -20,16 +21,6 @@
  :current-page
  (fn [db _]
    (get-in db [:route-state :page])))
-
-(reg-sub
- :wiki-root-dir
- (fn [db _]
-   (get-in db [:wiki-root-dir])))
-
-(reg-sub
- :google-access-token
- (fn [db _]
-   (get-in db [:google-access-token])))
 
 (reg-sub
  :modal

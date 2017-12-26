@@ -1,9 +1,7 @@
 ;; * Imports
 ;; ** Clojurescript imports
 (ns kiwi.core
-  (:require [cljs-time.coerce :as coerce]
-            [cljs-time.format :as f]
-            [cljs.core.async :refer [<! chan pipe put! timeout]]
+  (:require [cljs.core.async :refer [<! chan pipe put! timeout]]
             [clojure.string :as string]
             [goog.events :as events]
             [goog.history.EventType :as HistoryEventType]
@@ -14,14 +12,17 @@
             [kiwi.storage :as storage]
             [kiwi.subs :as subs]
             [kiwi.utils :as utils]
+            [kiwi.features :as features]
             [kiwi.editor.views]
+            [kiwi.search.views]
+            [kiwi.views :as views]
+            [kiwi.routes :as routes]
             [pushy.core :as pushy]
             [re-com.core :as re-com]
             [re-frame.core :as re-frame :refer [after dispatch dispatch-sync enrich path register-handler register-sub subscribe]]
             [re-frame.db :refer [app-db]]
             [reagent.core :as reagent]
             [reagent.session :as session]
-            [secretary.core :as secretary :include-macros true]
             [kiwi.markdown-processors :as markdown-processors]
             [cljs.core.async :as async]
             [kiwi.google-calendar :as google-calendar])
@@ -47,9 +48,6 @@
     (-seq [array] (array-seq array 0)))
 
 ;; * Feature flags
-
-(def schedule-enabled? false)
-(def tags-enabled? false)
 
 ;; * Markdown utility functions
 
@@ -114,8 +112,6 @@
 
     html-contents))
 
-
-
 (defn highlight-code [html-node]
   (let [nodes (.querySelectorAll html-node "pre code")]
     (loop [i (.-length nodes)]
@@ -125,34 +121,6 @@
         (recur (dec i))))))
 
 ;; * Routes
-
-(secretary/set-config! :prefix "#")
-
-(secretary/defroute index-route "/" []
-  (dispatch [:navigate [:home-page]]))
-
-(secretary/defroute settings-route "/settings" []
-  (dispatch [:navigate [:settings-page]]))
-
-(defn dispatch-search-page [filter]
-  (go
-    (let [pages (<! (page-db/load-all!))]
-      (dispatch [:navigate [:search-page]
-                 {:pages pages
-                  :filter filter}]))))
-
-(secretary/defroute search-route "/search" [_ query-params]
-  (dispatch-search-page (get query-params :filter "")))
-
-(secretary/defroute page-route "/page/:permalink" [permalink]
-  (go
-    (let [maybe-page (<! (page-db/load permalink))
-          page (if (= maybe-page :not-found) 
-                 (page/new-page permalink) 
-                 maybe-page)
-          permalinks (<! (page-db/load-permalinks))]
-      (dispatch [:navigate [:wiki-page-view permalink]
-                 {:page page :permalinks permalinks :editing? false}]))))
 
 ;; * Views
 ;; ** Editor
@@ -173,142 +141,7 @@
 
 ;; ** Navigation bar
 
-(defn dispatch-new-page! []
-  (dispatch [:show-modal :add-page]))
-
-(defn layout-header []
-  [:div.header
-   [:div [:a.btn.btn-default {:href (page-route {:permalink "home"})} [:i.fa.fa-home] " Home"]]
-   [:nav.navigation
-    [:div.btn-group
-     [:a.btn.btn-default {:href (settings-route)} [:i.fa.fa-cog] " Settings"]
-     [:a.btn.btn-default {:href (search-route)} [:i.fa.fa-search] " Search"]
-     [:button.btn.btn-default
-      {:on-click dispatch-new-page!}
-      [:i.fa.fa-plus] " New page"]]]])
-
 ;; ** Modals
-
-(defn modal [content]
-  [re-com/modal-panel
-   :child content
-   :backdrop-on-click #(dispatch [:hide-modal])])
-
-(defn add-page-form
-  "A form that lets a user specify options for creating a page."
-  []
-  (let [page-name (reagent/atom "")]
-    (fn []
-      [re-com/v-box
-       :gap "10px"
-       :width "400px"
-       :children [[:h3 "New page"]
-                  [re-com/label
-                   :label [:p
-                           "Create a new page by giving it a name. You can also create pages by clicking a "
-                           [:code "[[Wiki Link]]"]
-                           " to a page that doesn't exist yet."]
-                   ]
-                  [re-com/input-text
-                   :model page-name
-                   :width "auto"
-                   :attr {:auto-focus true}
-                   :on-change #(reset! page-name %)
-                   :change-on-blur? false
-                   :placeholder "Name of the page"]
-                  [re-com/label
-                   :label
-                   (when-not (string/blank? @page-name)
-                             [:p "You'll be able to link to the page by typing "
-                              [:code "[[" (page/capitalize-words @page-name) "]]"]
-                              "."])]
-                  [re-com/button
-                   :label "Add"
-                   :class "btn-success"
-                   :disabled? (string/blank? @page-name)
-                   :on-click (fn [_]
-                               (re-frame/dispatch [:create-page @page-name])
-                               (re-frame/dispatch [:hide-modal]))]]])))
-
-(defn add-page-modal []
-  [modal 
-   [add-page-form]])
-
-(defn delete-page-modal []
-  (let [page (subscribe [:current-page])]
-    (fn []
-      [modal
-       [re-com/v-box
-        :gap "10px"
-        :width "400px"
-        :children [[:h3 "Are you sure?"]
-                   [:p "You are about to delete " [:b (page/title @page)] "."]
-                   [re-com/h-box
-                    :children [[re-com/button
-                                :label "Cancel"
-                                :class "btn-default"
-                                :style {:margin-right "10px"}
-                                :on-click #(re-frame/dispatch [:hide-modal])]
-                               [re-com/button
-                                :label "Delete it"
-                                :class "btn-danger"
-                                :on-click (fn [_]
-                                            (go
-                                              (let [deleted (<! (page-db/delete! @page))]
-                                                (when (= deleted :deleted)
-                                                  (re-frame/dispatch [:assoc-editing? false])
-                                                  (re-frame/dispatch [:hide-modal])
-                                                  (.back js/window.history)))))]]]]]])))
-
-
-
-(defn schedule-page-form
-  "A form that lets a user specify a date and time to schedule a page"
-  []
-  (let [page (subscribe [:current-page])
-        date-string (reagent/atom "")]
-    (when (get @page :scheduled)
-      (reset! date-string
-              (-> (get @page :scheduled)
-                  (sugar.Date.)
-                  (.full)
-                  (.-raw)))
-      )
-    (fn []
-      [re-com/v-box
-       :gap "10px"
-       :width "400px"
-       :children [[:h3 "Schedule page"]
-                  [:p "Scheduling a page will add it as an event to Google Calendar."]
-                  [re-com/input-text
-                   :model date-string
-                   :width "auto"
-
-                   :on-change #(reset! date-string %)
-                   :attr {:auto-focus true}
-                   :change-on-blur? false
-                   :placeholder "3pm tomorrow"]
-                  [re-com/label
-                   :label
-                   (when-not (string/blank? @date-string)
-                     [:p [:i (str (sugar.Date.create @date-string))]])]
-                  [re-com/button
-                   :label "Schedule"
-                   :class "btn-success"
-                   :disabled? (= (str (sugar.Date.create @date-string)) "Invalid Date")
-                   :on-click (fn [_]
-                               (re-frame/dispatch [:schedule-page @page (sugar.Date.create @date-string)])
-                               (re-frame/dispatch [:hide-modal]))]]])))
-
-(defn schedule-page-modal []
-  [modal
-   [schedule-page-form]])
-
-
-(defmulti modals identity)
-(defmethod modals :add-page [] [add-page-modal])
-(defmethod modals :delete-page [] [delete-page-modal])
-(defmethod modals :schedule-page [] [schedule-page-modal])
 
 ;; ** Wiki Page
 
@@ -359,7 +192,7 @@
 
 (defn tags-list
   ([opts tags]
-   (when tags-enabled?
+   (when features/tags-enabled?
      [:ul
       (merge {:className "tags-list"} opts)
       (map (fn [tag] ^{:key tag}
@@ -367,7 +200,7 @@
               [re-com/button
                :class "btn-tag"
                :label (str "#" tag)
-               :on-click #(dispatch [:set-route (search-route
+               :on-click #(dispatch [:set-route (routes/search-route
                                                  {:query-params {:filter (str "tags:" tag)}})])]])
            tags)]))
   ([tags]
@@ -379,7 +212,7 @@
       (let [{:keys [title contents tags]} @page] 
         [:div
          [:div.btn-group.pull-right
-          (when schedule-enabled?
+          (when features/schedule-enabled?
             (js/console.log page)
             [schedule-button (get @page :scheduled)])
           (when @editing
@@ -392,23 +225,12 @@
             [:article [markdown-content contents]]]
            [kiwi.editor.views.editor {:page page :editing @editing}])]))))
 
-(defn base-layout [content]
-  (let [modal (subscribe [:modal])]
-    (fn [content] 
-      [:div
-       [layout-header]
-       [:section.content-wrapper
-        [:div.content
-         content]]
-       (when @modal
-         (modals @modal))])))
-
 (defn wiki-page []
   (let [page (subscribe [:current-page])]
     (reagent/create-class
      {:reagent-render 
       (fn []
-        [base-layout
+        [views/base-layout
          [wiki-page-contents page]])})))
 
 ;; ** Settings
@@ -441,7 +263,7 @@
   (let [wiki-root-dir (subscribe [:wiki-root-dir])
         google-access-token (subscribe [:google-access-token])]
     (fn []
-      [base-layout
+      [views/base-layout
        [:article#page.settings
         [:section 
          [:h1.post-title "Settings"]
@@ -449,7 +271,7 @@
          (when (not (nil? @wiki-root-dir))
            [:p [ :code @wiki-root-dir]])
          [set-wiki-root-button]]
-        (when schedule-enabled?
+        (when features/schedule-enabled?
           [:section
            [:h2 "Link with Google Calendar"]
            (if @google-access-token
@@ -458,57 +280,10 @@
               [link-with-google-button "Re-link with Google"]]
              [link-with-google-button])])]])))
 
-;; ** Search
-
-(defn page-list-item [page]
-  (let [title (:title page)
-        tags (:tags page)
-        contents (:contents page)
-        preview (->> (string/split contents #" ")
-                     (take 20)
-                     (string/join " "))
-        permalink (:permalink page)
-        date-format (f/formatter "MMMM d, yyyy")
-        date (f/unparse date-format (coerce/from-date (:timestamp page)))
-        path (str "#/page/" permalink)]
-    ^{:key permalink}
-    [:li
-     [:div.row 
-      [:div.col-xs
-       [:h3.float-xs-left [:a.page-link.internal {:href path} title]]
-       [:span.page-date.float-xs-right date]]]
-     [:div.row
-      [:div.col-xs
-       [:p.page-preview (str preview "...")]
-       [tags-list {:className "tags-preview"} tags]]]]))
-
-(defn search-page []
-  (let [filtered-pages (subscribe [:filtered-pages])
-        search-text (subscribe [:search-filter])]
-    (reagent/create-class
-     {:component-did-mount 
-      (fn []
-        (print "did-mount"))
-      :reagent-render
-      (fn []
-        [base-layout
-          [:article#page
-           [:h1.post-title "Search"]
-           [re-com/input-text
-            :attr {:auto-focus true}
-            :change-on-blur? false
-            :model search-text
-            :width "100%"
-            :style {:font-size "16px"}
-            :placeholder "Search..."
-            :on-change #(dispatch [:assoc-search-filter %])]
-           [:ul.page-list
-            (map page-list-item @filtered-pages)]]])})))
-
 ;; ** Home page
 
 (defn home-page []
-  [base-layout
+  [views/base-layout
    [:article#page]])
 
 ;; ** Wiring
@@ -527,7 +302,7 @@
   [settings-page])
 
 (defmethod page :search-page [_ _]
-  [search-page])
+  [kiwi.search.views.search-page])
 
 (defn app []
   (let [current-route (subscribe [:current-route])]
@@ -566,13 +341,13 @@
     :handler toggle-editing!}
    {:key "g s"
     :keymap :local
-    :handler #(dispatch [:set-route (search-route)])}
+    :handler #(dispatch [:set-route (routes/search-route)])}
    {:key "g h"
     :keymap :local
-    :handler #(dispatch [:set-route (page-route {:permalink "home"})])}
+    :handler #(dispatch [:set-route (routes/page-route {:permalink "home"})])}
    {:key "n"
     :keymap :local
-    :handler dispatch-new-page!}
+    :handler #(dispatch [:show-modal :add-page])}
    {:key "esc"
     :keymap :global
     :handler escape!}
@@ -612,7 +387,7 @@
         (events/listen
           HistoryEventType/NAVIGATE
           (fn [event]
-              (secretary/dispatch! (.-token event))))
+              (routes/dispatch! (.-token event))))
         (.setEnabled true)))
 
 (defn ^:export init []
@@ -627,6 +402,6 @@
     (register-keybindings! keybindings)
 
     (if (not (nil? wiki-root-dir))
-      (dispatch [:set-route (page-route {:permalink "home"})])
-      (dispatch [:set-route (settings-route)]))
+      (dispatch [:set-route (routes/page-route {:permalink "home"})])
+      (dispatch [:set-route (routes/settings-route)]))
     (render)))

@@ -8,6 +8,7 @@
             [kiwi.google-calendar :as google-calendar]
             [kiwi.markdown-processors :as markdown-processors]
             [kiwi.editor.events]
+            [kiwi.search.events]
             [pushy.core :as pushy]
             [re-frame.core
              :as
@@ -173,14 +174,6 @@
                          (.toString))]
      {:db db
       :dispatch [:save-page new-content]})))
-
-;; * Searching
-
-(reg-event-db
- :assoc-search-filter
- (fn [db [_ filter]]
-   (assoc-in db  [:route-state :filter] filter)))
-
 
 ;; * Settings
 

@@ -14,15 +14,10 @@
              :as
              re-frame
              :refer
-             [after enrich path reg-event-db reg-event-fx]]
+             [after enrich path reg-event-db reg-event-fx reg-fx]]
             [secretary.core :as secretary]
             [cljs.core.async :as async])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
-
-(defn- set-hash!
-  "Set the browser's location hash."
-  [path]
-  (set! (.-hash js/window.location) path))
 
 ;; * Initialization
 
@@ -64,25 +59,42 @@
        (assoc :current-route route)
        (assoc :route-state (or route-state {})))))
 
+(defn- set-hash!
+  "Set the browser's location hash."
+  [path]
+  (set! (.-hash js/window.location) path))
+
+(reg-fx
+ :set-hash
+ (fn [path]
+   (set-hash! path)))
+
+(defn set-route [{:keys [db] as :cofx} [_ path]]
+  {:db db
+   :set-hash path})
+
 (reg-event-fx
  :set-route
- (fn [{:keys [db] as :cofx} [_ path]]
-   (set-hash! path)
-   {:db db}))
+ set-route)
 
 ;; TODO: Move elsewhere
 ;; * Scheduling
 
-(reg-event-db
- :assoc-google-access-token
- [(after #(storage/save! "google-access-token" (:google-access-token %)))]
- (fn [db [_ access-token]]
-   (assoc db :google-access-token access-token)))
-
+(reg-fx
+ :storage-save
+ (fn [{:keys [key value]}]
+   (storage/save! key value)))
 
 (reg-event-fx
+ :assoc-google-access-token
+ (fn [{:keys [db]} [_ access-token]]
+   {:db (assoc db :google-access-token access-token)
+    :storage-save {:key "google-access-token" :value access-token}}))
+
+;; TODO: move to page.events
+(reg-event-fx
  :add-metadata
- (fn [{ :keys [db]} [_ page metadata]]
+ (fn [{:keys [db]} [_ metadata]]
    (let [processor (markdown-processors/metadata-processor metadata)
          page (get-in db [:route-state :page])
          old-content (get-in page [:contents])
@@ -94,11 +106,9 @@
        {:db db
         :dispatch [:save-page new-content]}))))
 
-
-
 (reg-event-fx
  :schedule-page
- (fn [{:keys [db]} [_ page js-start-date]]
+ (fn [{:keys [db]} [_ js-start-date]]
    (let [processor (markdown-processors/scheduling-processor js-start-date)
          page (get-in db [:route-state :page])
          old-content (get-in page [:contents])

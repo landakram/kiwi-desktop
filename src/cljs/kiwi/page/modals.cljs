@@ -114,7 +114,7 @@
                    :class "btn-success"
                    :disabled? (= (str (sugar.Date.create @date-string)) "Invalid Date")
                    :on-click (fn [_]
-                               (re-frame/dispatch [:schedule-page @page (sugar.Date.create @date-string)])
+                               (re-frame/dispatch [:schedule-page (sugar.Date.create @date-string)])
                                (re-frame/dispatch [:hide-modal]))]]])))
 
 (defn- schedule-page-modal []

@@ -9,7 +9,7 @@
              :as
              re-frame
              :refer
-             [after enrich path reg-event-db reg-event-fx]]
+             [after enrich path reg-event-db reg-event-fx reg-fx]]
             [cljs.core.async :as async])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
@@ -45,19 +45,29 @@
           (when (get result "accessTokens")
             (re-frame/dispatch-sync [:assoc-google-access-token (get result "accessTokens")]))
           (when (get result "id")
-            (re-frame/dispatch [:add-metadata page {:scheduled-id (get result "id")}])))))))
+            (re-frame/dispatch [:add-metadata {:scheduled-id (get result "id")}])))))))
 
 
 (defn save-page! [page]
   (page-db/save! page))
 
-(reg-event-db
+(reg-fx
  :save-page
- [(path :route-state :page)
-  (after save-page!)
-  (after schedule-page!)]
- (fn [{:keys [permalink] :as page} [_ edited-contents]]
-   (page/make-page permalink edited-contents (js/Date.))))
+ save-page!)
+
+(reg-fx
+ :schedule-page
+ schedule-page!)
+
+(reg-event-fx
+ :save-page
+ [(path :route-state :page)]
+ (fn [{:keys [db]} [_ edited-contents]]
+   (let [permalink (db :permalink)
+         page (page/make-page permalink edited-contents (js/Date.))]
+     {:db page
+      :save-page page
+      :schedule-page page})))
 
 (reg-event-fx
  :create-page

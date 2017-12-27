@@ -45,6 +45,10 @@
    (filter #(= "yaml" (:type %))
            (:children ast))))
 
+(defn extract-metadata [ast]
+  (let [yaml-node (extract-yaml-node ast)]
+    (get-in yaml-node [:data :parsedValue])))
+
 (defn extract-tags [ast]
   (let [yaml-node (extract-yaml-node ast)]
     (get-in yaml-node [:data :parsedValue :tags])))
@@ -68,6 +72,7 @@
      :permalink permalink
      :contents contents
      :timestamp modified-at
+     :metadata (extract-metadata ast)
      :scheduled (extract-scheduled ast)
      :scheduled-id (extract-scheduled-id ast)
      :tags (extract-tags ast)}))

@@ -82,8 +82,9 @@
                         :compiler {:main runners.browser
                                    :optimizations :none
                                    :asset-path "js/tests/out"
+                                   :preloads [devtools.preload]
                                    :output-dir "resources/public/js/tests/out"
-                                   :output-to "resources/public/js/all-tests.js"
+                                   :output-to "resources/public/js/tests/all-tests.js"
                                    :source-map-timestamp true}}
 
                        {:id           "release"

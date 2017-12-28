@@ -12,27 +12,14 @@
 (secretary/set-config! :prefix "#")
 
 (secretary/defroute index-route "/" []
-  (dispatch [:navigate [:home-page]]))
+  (dispatch [:navigate [:home-page] {:path "/"}]))
 
 (secretary/defroute settings-route "/settings" []
-  (dispatch [:navigate [:settings-page]]))
-
-(defn dispatch-search-page [filter]
-  (go
-    (let [pages (<! (page-db/load-all!))]
-      (dispatch [:navigate [:search-page]
-                 {:pages pages
-                  :filter filter}]))))
+  (dispatch [:navigate [:settings-page] {:path "/settings"}]))
 
 (secretary/defroute search-route "/search" [_ query-params]
-  (dispatch-search-page (get query-params :filter "")))
+  (let [filter (get query-params :filter "")]
+    (dispatch [:show-search-page filter])))
 
 (secretary/defroute page-route "/page/:permalink" [permalink]
-  (go
-    (let [maybe-page (<! (page-db/load permalink))
-          page (if (= maybe-page :not-found) 
-                 (page/new-page permalink) 
-                 maybe-page)
-          permalinks (<! (page-db/load-permalinks))]
-      (dispatch [:navigate [:wiki-page-view permalink]
-                 {:page page :permalinks permalinks :editing? false}]))))
+  (dispatch [:show-page permalink]))

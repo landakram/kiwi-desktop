@@ -54,12 +54,53 @@
 
 ;; * Navigation
 
-(reg-event-db
+(reg-fx
+ :load-page
+ (fn [permalink]
+  (go
+    (let [maybe-page (<! (page-db/load permalink))
+          page (if (= maybe-page :not-found) 
+                 (page/new-page permalink) 
+                 maybe-page)
+          permalinks (<! (page-db/load-permalinks))]
+      (re-frame/dispatch
+       [:navigate [:wiki-page-view permalink]
+        {:path (str "/page/" permalink)
+         :page page
+         :permalinks permalinks
+         :editing? false}])))))
+
+
+(reg-event-fx
+ :show-page
+ (fn [{:keys [db]} [_ permalink]]
+   {:db db
+    :load-page permalink}))
+
+(reg-fx
+ :load-search-page
+ (fn [filter]
+   (go
+    (let [pages (<! (page-db/load-all!))]
+      (re-frame/dispatch [:navigate [:search-page]
+                 {:path "/search"
+                  :pages pages
+                  :filter filter}])))))
+
+(reg-event-fx
+ :show-search-page
+ (fn [{:keys [db]} [_ filter]]
+   {:db db
+    :load-search-page filter}))
+
+(reg-event-fx
  :navigate 
- (fn [db [_ route & [route-state]]]
-   (-> db
-       (assoc :current-route route)
-       (assoc :route-state (or route-state {})))))
+ (fn [{:keys [db]} [_ route & [route-state]]]
+   {:db
+    (-> db
+        (assoc :current-route route)
+        (assoc :route-state (or route-state {})))
+    :set-hash (route-state :path)}))
 
 (defn- set-hash!
   "Set the browser's location hash."

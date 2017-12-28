@@ -74,7 +74,7 @@
  (fn [{:keys [db]} [_ page-title]]
    (let [permalink (page/get-permalink-from-title page-title)]
      {:db db
-      :dispatch [:set-route (str "/page/" permalink)]})))
+      :dispatch [:show-page permalink]})))
 
 (reg-event-fx
  :checkbox-toggle

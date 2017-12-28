@@ -1,9 +1,12 @@
 (ns kiwi.handlers-test
   (:require [kiwi.handlers :as sut]
-            [re-frame.core :as r]
+            [kiwi.core]
+            [re-frame.core :as r] 
             [day8.re-frame.test :as rf-test]
-            [cljs.test :refer-macros [deftest is testing run-tests]]))
-
+            [devcards.core :refer-macros [deftest]]
+            [cljs.test :refer-macros [is testing run-tests]]
+            [kiwi.routes :as routes]
+            [kiwi.page.core :as page]))
 
 (deftest test-show-modal
   (rf-test/run-test-sync
@@ -18,12 +21,14 @@
 
 (deftest test-navigate
   (rf-test/run-test-sync
+   (r/reg-fx :set-hash #())
+
    (r/dispatch [:initialize])
 
    (testing "sets current-route"
      (let [current-route (r/subscribe [:current-route])]
-       (r/dispatch [:navigate :some-page])
-       (is (= @current-route :some-page))))))
+       (r/dispatch [:navigate [:some-page] {:path ""}])
+       (is (= @current-route [:some-page]))))))
 
 (defn capture-into [atm]
   (fn [arg]
@@ -62,31 +67,50 @@
        (is (= @(r/subscribe [:google-access-token]) "test-token"))))))
 
 (deftest test-add-metadata
-  (rf-test/run-test-sync
+  (rf-test/run-test-async
    (r/reg-fx :save-page #())
    (r/reg-fx :schedule-page #())
+   (r/reg-fx :set-hash #())
 
    (r/dispatch [:initialize])
    (r/dispatch [:create-page "A Page"])
 
-   (testing "sets metadata on page"
-     (r/dispatch [:add-metadata {:metadata-key "metadata-value"}])
-     (is (= (get-in
-             @(r/subscribe [:current-page])
-             [:metadata :metadata-key])
-            "metadata-value")))))
+   (rf-test/wait-for
+    [:navigate]
+
+    (r/dispatch [:add-metadata {:metadata-key "metadata-value"}])
+
+    (rf-test/wait-for
+     [:save-page]
+
+     (testing "sets metadata on page"
+       (is (= (get-in
+               @(r/subscribe [:current-page])
+               [:metadata :metadata-key])
+              "metadata-value")))))))
 
 (deftest test-schedule-page
-  (rf-test/run-test-sync
+  (rf-test/run-test-async
    (r/reg-fx :save-page #())
    (r/reg-fx :schedule-page #())
+   (r/reg-fx :set-hash #())
 
    (r/dispatch [:initialize])
    (r/dispatch [:create-page "A Page"])
 
-   (testing "sets scheduled date on page"
-     (let [date (js/Date.)
-           page (r/subscribe [:current-page])]
-       (r/dispatch [:schedule-page date])
-       (is (= (get @page :scheduled)
-              date))))))
+   ;; Note: test only works when this line is present:
+   (rf-test/wait-for
+    [:navigate]
+
+    (let [date (js/Date.)
+          page (r/subscribe [:current-page])]
+      (r/dispatch [:schedule-page date])
+
+      (rf-test/wait-for
+       [:save-page]
+
+       (testing "sets scheduled date on page"
+         (is (= (get @page :scheduled)
+                date))))))))
+
+#_(run-tests)

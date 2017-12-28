@@ -22,6 +22,9 @@
                  [day8.re-frame/test "0.1.5"]
                  [re-com "1.0.0"]
                  [secretary "1.2.3"]
+                 ;; Uses the devcards iframe fork here:
+                 ;; https://github.com/nberger/devcards/tree/iframe
+                 [devcards "0.2.4-SNAPSHOT"]
                  [com.andrewmcveigh/cljs-time "0.5.0"]
                  [binaryage/devtools "0.9.4"]]
 
@@ -73,6 +76,19 @@
                                    :optimizations :simple
                                    :pretty-print true
                                    :cache-analysis true}}
+                       {:id "devcards-test"
+                        :source-paths ["src"
+                                       "test"
+                                       "env/dev"]
+                        :figwheel {:devcards true}
+                        :compiler {:main runners.browser
+                                   :optimizations :none
+                                   :asset-path "js/tests/out"
+                                   :preloads [devtools.preload]
+                                   :output-dir "resources/public/js/tests/out"
+                                   :output-to "resources/public/js/tests/all-tests.js"
+                                   :source-map-timestamp true}}
+
                        {:id           "release"
                         :source-paths ["src/clj" "src/cljs/kiwi" "src/cljc"]
                         :compiler     {:output-to     "resources/public/js/app.js"

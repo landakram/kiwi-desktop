@@ -1,3 +1,3 @@
-(ns kiwi.user
+(ns runners.browser
   (:require [kiwi.tests]))
 

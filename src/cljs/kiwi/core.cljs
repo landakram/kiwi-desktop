@@ -77,7 +77,7 @@
         (events/listen
           HistoryEventType/NAVIGATE
           (fn [event]
-              (routes/dispatch! (.-token event))))
+            (routes/dispatch! (.-token event))))
         (.setEnabled true)))
 
 (defn ^:export init []

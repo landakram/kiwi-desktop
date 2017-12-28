@@ -10,11 +10,29 @@ Then run `electron .` to start electron.
 
 ### Running tests
 
+Tests can be run directly in the cljs repl or with devcards in electron.
+
+#### CLJS repl
+
 After starting the cljs repl, run the following: 
 
 ```cljs
 cljs.user> (require 'kiwi.user)
-cljs.user> (kiwi.runner/run)
+cljs.user> (kiwi.tests/run)
+```
+
+#### Devcards
+
+First ensure that `devcards-test` is being built by figwheel: 
+
+```cljs
+cljs.user> (start-autobuild :devcards-test)
+```
+
+Open the test suite in electron by running: 
+
+```sh
+electron resources/public/tests.html
 ```
 
 ## Release builds

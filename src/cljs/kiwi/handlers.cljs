@@ -24,11 +24,13 @@
 (defonce initial-state {:current-route [:home-page]
                         :route-state {}})
 
-(reg-event-db :initialize
-  [(after kiwi.settings.events.set-page-db-wiki-dir!)]
-  (fn [db [_ state]]
-    ; Use initial-state as a default, but keep anything already in db
-    (merge initial-state db (or state {}))))
+(reg-event-fx
+ :initialize
+ (fn [{:keys [db]} [_ state]]
+ ; Use initial-state as a default, but keep anything already in db
+   (let [new-db (merge initial-state db (or state {}))]
+     {:db new-db
+      :set-wiki-dir (new-db :wiki-root-dir)})))
 
 (defn p-r [thing]
   (js/console.log thing)

@@ -1,9 +1,12 @@
 (ns kiwi.handlers-test
   (:require [kiwi.handlers :as sut]
-            [re-frame.core :as r]
+            [kiwi.core]
+            [re-frame.core :as r] 
             [day8.re-frame.test :as rf-test]
-            [cljs.test :refer-macros [deftest is testing run-tests]]))
-
+            [devcards.core :refer-macros [deftest]]
+            [cljs.test :refer-macros [is testing run-tests]]
+            [kiwi.routes :as routes]
+            [kiwi.page.core :as page]))
 
 (deftest test-show-modal
   (rf-test/run-test-sync
@@ -66,8 +69,17 @@
    (r/reg-fx :save-page #())
    (r/reg-fx :schedule-page #())
 
+   ;; Note: this is super hacky
+   (r/reg-fx :set-hash
+             (fn [_]
+               (routes/dispatch! "/page/a_page")))
+
    (r/dispatch [:initialize])
    (r/dispatch [:create-page "A Page"])
+
+   ;; Note: test only works when this line is present:
+   (r/dispatch [:navigate [:wiki-page-view "a_page"]
+              {:page (page/new-page "a_page") :permalinks [] :editing? false}])
 
    (testing "sets metadata on page"
      (r/dispatch [:add-metadata {:metadata-key "metadata-value"}])
@@ -81,8 +93,17 @@
    (r/reg-fx :save-page #())
    (r/reg-fx :schedule-page #())
 
+   ;; Note: this is super hacky
+   (r/reg-fx :set-hash
+             (fn [_]
+               (routes/dispatch! "/page/a_page")))
+
    (r/dispatch [:initialize])
    (r/dispatch [:create-page "A Page"])
+
+   ;; Note: test only works when this line is present:
+   (r/dispatch [:navigate [:wiki-page-view "a_page"]
+              {:page (page/new-page "a_page") :permalinks [] :editing? false}])
 
    (testing "sets scheduled date on page"
      (let [date (js/Date.)

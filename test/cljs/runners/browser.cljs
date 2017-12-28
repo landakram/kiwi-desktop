@@ -1,3 +1,3 @@
 (ns runners.browser
-  (:require [kiwi.runner]))
+  (:require [kiwi.tests]))
 

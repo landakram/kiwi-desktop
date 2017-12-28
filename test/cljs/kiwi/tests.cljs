@@ -1,4 +1,4 @@
-(ns kiwi.runner
+(ns kiwi.tests
   (:require [cljs.test :refer-macros [run-tests run-all-tests]]
             [kiwi.handlers-test]
             [kiwi.settings.events-test]))

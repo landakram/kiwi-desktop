@@ -50,7 +50,7 @@
       (set! (.-onclick node)
             (fn [e]
               (this-as this
-                (dispatch [:checkbox-toggle [(.-id (.-parentNode this))]])
+                (dispatch [:checkbox-toggle [(.-id (.closest this ".task-list-item"))]])
                 (.preventDefault e)))))
     nodes))
 

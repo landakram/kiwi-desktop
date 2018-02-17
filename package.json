@@ -29,6 +29,7 @@
   "dependencies": {
     "electron-context-menu": "^0.9.1",
     "electron-debug": "^1.2.0",
+    "electron-default-menu": "^1.0.1",
     "electron-google-auth": "^0.0.1",
     "electron-oauth2": "^3.0.0",
     "googleapis": "^23.0.0",

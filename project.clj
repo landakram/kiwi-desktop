@@ -16,7 +16,7 @@
                  [hiccup "1.0.5"]
                  [environ "1.0.1"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                 [org.clojure/clojurescript "1.9.671" :scope "provided"]
+                 [org.clojure/clojurescript "1.10.339" :scope "provided"]
                  [kibu/pushy "0.3.3"]
                  [re-frame "0.9.4"]
                  [day8.re-frame/test "0.1.5"]
@@ -50,9 +50,6 @@
   :minify-assets
   {:assets
    {"resources/public/css/site.min.css" "resources/public/css/site.css"}}
-
-  :repl-options {:init-ns          kiwi.repl
-                 :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
   :cljsbuild {:builds [{:id           "dev"
                         :source-paths ["src/clj"
@@ -116,7 +113,8 @@
              :css-dirs         ["resources/public/css"]
              :server-port      3449}
 
-  :profiles {:dev {:dependencies [[figwheel-sidecar "0.5.0-6"]
-                                  [com.cemerick/piggieback "0.2.1"]]
+  :profiles {:dev {:dependencies [[figwheel-sidecar "0.5.16"]
+                                  [cider/piggieback "0.3.1"]]
                    :source-paths ["src/clj" "src/cljs" "src/cljc" "env/dev/cljs"]
+                   :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
                    :env          {:dev true}}})

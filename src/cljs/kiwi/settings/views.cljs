@@ -6,7 +6,8 @@
    [kiwi.views :as views]
    [kiwi.keybindings :as keybindings]
    [kiwi.features :as features]
-   [cljs.core.async :as async])
+   [cljs.core.async :as async]
+   [re-com.core :as re-com])
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]]
    [reagent.ratom :refer [reaction]])
@@ -17,18 +18,22 @@
 (def remote (.-remote electron))
 (def dialog (.-dialog remote))
 
+(def fs (js/require "fs"))
+(def os (js/require "os"))
 
-(defn set-wiki-root-button []
+
+(defn set-wiki-root-button [text]
   (let [on-directory-chosen
         (fn [directories]
           (when (seq directories)
             (dispatch [:assoc-wiki-root-dir (first (js->clj directories))])))]
     [:button.btn.btn-default
-     {:on-click (fn [_]
-                  (.showOpenDialog dialog
-                                   (clj->js {:properties ["openDirectory"]})
-                                   on-directory-chosen))}
-     "Set wiki location"]))
+      {:on-click (fn [_]
+                   (.showOpenDialog dialog
+                                    (clj->js {:properties ["openDirectory"]})
+                                    on-directory-chosen))}
+      text]))
+
 
 (defn link-with-google-button
   ([text]
@@ -41,6 +46,46 @@
   ([] 
    [link-with-google-button "Link with Google"]))
 
+
+#_(dispatch [:assoc-wiki-root-dir nil])
+
+(def default-wiki-path
+  (str (.-homedir (.userInfo os)) "/Dropbox/Apps/KiwiApp"))
+
+(defn file-exists? [path]
+  (try
+    (do
+      (.accessSync fs path)
+      true)
+    (catch :default e
+      false)))
+
+(defn auto-setup-alert []
+  [re-com/alert-box
+   :alert-type :info
+   :heading "Already have a wiki?"
+   :body [:div
+          [:p "It looks like you already have a wiki at " [:code default-wiki-path] "."]
+          [:p "Would you like to use this wiki?"]
+          [:button.btn.btn-default
+           {:on-click #(dispatch [:assoc-wiki-root-dir default-wiki-path])}
+           "Yes, please!"]]])
+
+(defn setup []
+  (fn []
+    [:section
+     [:h2 "Setup"]
+     (when (file-exists? default-wiki-path)
+       [auto-setup-alert])
+
+     [:div
+      [:p
+       "Configure Kiwi by telling it where to find your wiki. If you use Kiwi for iOS, your wiki is located at "
+       [:code "/Users/you/Dropbox/Apps/KiwiApp"]
+       "."]
+      [:div.btn-group
+       [set-wiki-root-button "Find existing wiki"]
+       [:button.btn.btn-default "Create new wiki"]]]]))
 
 (defn keybindings-help []
   [:section
@@ -56,6 +101,7 @@
        [:tr
         [:th [:code (:key keybinding)]]
         [:th (:description keybinding)]])]]])
+
 (defn settings-page []
   (let [wiki-root-dir (subscribe [:wiki-root-dir])
         google-access-token (subscribe [:google-access-token])]
@@ -64,10 +110,13 @@
        [:article#page.settings
         [:section 
          [:h1.post-title "Settings"]
-         [:h2 "Wiki location"]
-         (when (not (nil? @wiki-root-dir))
-           [:p [ :code @wiki-root-dir]])
-         [set-wiki-root-button]]
+
+         (if (not (nil? @wiki-root-dir))
+           [:section
+            [:p "Your wiki is located at "[ :code @wiki-root-dir]]
+            [set-wiki-root-button "Choose different location"]]
+           [setup])]
+        
         (when features/schedule-enabled?
           [:section
            [:h2 "Link with Google Calendar"]

@@ -15,7 +15,10 @@
 
 (defn- layout-header []
   [:div.header
-   [:div [:a.btn.btn-default {:href (routes/page-route {:permalink "home"})} [:i.fa.fa-home] " Home"]]
+   [:div
+    [:div.btn-group
+     [:button.btn.btn-default {:on-click #(.back js/window.history)} [:i.fa.fa-angle-left] " Back"]
+     [:a.btn.btn-default {:href (routes/page-route {:permalink "home"})} [:i.fa.fa-home] " Home"]]]
    [:nav.navigation
     [:div.btn-group
      [:a.btn.btn-default {:href (routes/settings-route)} [:i.fa.fa-cog] " Settings"]

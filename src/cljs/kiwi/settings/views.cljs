@@ -4,6 +4,7 @@
 
    [kiwi.google-calendar :as google-calendar]
    [kiwi.views :as views]
+   [kiwi.keybindings :as keybindings]
    [kiwi.features :as features]
    [cljs.core.async :as async])
   (:require-macros
@@ -41,6 +42,20 @@
    [link-with-google-button "Link with Google"]))
 
 
+(defn keybindings-help []
+  [:section
+   [:h2 "Keybindings"]
+   [:p "Kiwi has a number of built-in " [:a {:href "https://www.vim.org/" :target "_blank"} "vim"] "-esque keybindings, for those who are keyboard-inclined."]
+   [:table.table
+    [:thead
+     [:tr
+      [:th "Key"]
+      [:th "Description"]]]
+    [:tbody
+     (for [keybinding keybindings/keybindings]
+       [:tr
+        [:th [:code (:key keybinding)]]
+        [:th (:description keybinding)]])]]])
 (defn settings-page []
   (let [wiki-root-dir (subscribe [:wiki-root-dir])
         google-access-token (subscribe [:google-access-token])]
@@ -60,5 +75,7 @@
              [:div 
               [:p "Already linked with Google."]
               [link-with-google-button "Re-link with Google"]]
-             [link-with-google-button])])]])))
+             [link-with-google-button])])
+
+        #_[keybindings-help]]])))
 

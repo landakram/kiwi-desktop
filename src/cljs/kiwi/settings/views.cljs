@@ -114,7 +114,9 @@
          (if (not (nil? @wiki-root-dir))
            [:section
             [:p "Your wiki is located at "[ :code @wiki-root-dir]]
-            [set-wiki-root-button "Choose different location"]]
+            [:button.btn.btn-default
+             {:on-click #(dispatch [:assoc-wiki-root-dir nil])}
+             "Unlink wiki"]]
            [setup])]
         
         (when features/schedule-enabled?

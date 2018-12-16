@@ -5,6 +5,7 @@
             [kiwi.editor.subs]
             [kiwi.search.subs]
             [kiwi.settings.subs]
+            [kiwi.setup.subs]
             [kiwi.page.subs]
             [clojure.string :as string]))
 

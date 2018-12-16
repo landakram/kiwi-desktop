@@ -13,26 +13,6 @@
    [reagent.ratom :refer [reaction]])
   )
 
-(def electron (js/require "electron"))
-(def shell (.-shell electron))
-(def remote (.-remote electron))
-(def dialog (.-dialog remote))
-
-(def fs (js/require "fs"))
-(def os (js/require "os"))
-
-
-(defn set-wiki-root-button [text]
-  (let [on-directory-chosen
-        (fn [directories]
-          (when (seq directories)
-            (dispatch [:assoc-wiki-root-dir (first (js->clj directories))])))]
-    [:button.btn.btn-default
-      {:on-click (fn [_]
-                   (.showOpenDialog dialog
-                                    (clj->js {:properties ["openDirectory"]})
-                                    on-directory-chosen))}
-      text]))
 
 
 (defn link-with-google-button
@@ -49,43 +29,8 @@
 
 #_(dispatch [:assoc-wiki-root-dir nil])
 
-(def default-wiki-path
-  (str (.-homedir (.userInfo os)) "/Dropbox/Apps/KiwiApp"))
 
-(defn file-exists? [path]
-  (try
-    (do
-      (.accessSync fs path)
-      true)
-    (catch :default e
-      false)))
 
-(defn auto-setup-alert []
-  [re-com/alert-box
-   :alert-type :info
-   :heading "Already have a wiki?"
-   :body [:div
-          [:p "It looks like you already have a wiki at " [:code default-wiki-path] "."]
-          [:p "Would you like to use this wiki?"]
-          [:button.btn.btn-default
-           {:on-click #(dispatch [:assoc-wiki-root-dir default-wiki-path])}
-           "Yes, please!"]]])
-
-(defn setup []
-  (fn []
-    [:section
-     [:h2 "Setup"]
-     (when (file-exists? default-wiki-path)
-       [auto-setup-alert])
-
-     [:div
-      [:p
-       "Configure Kiwi by telling it where to find your wiki. If you use Kiwi for iOS, your wiki is located at "
-       [:code "/Users/you/Dropbox/Apps/KiwiApp"]
-       "."]
-      [:div.btn-group
-       [set-wiki-root-button "Find existing wiki"]
-       [:button.btn.btn-default "Create new wiki"]]]]))
 
 (defn keybindings-help []
   [:section
@@ -111,13 +56,15 @@
         [:section 
          [:h1.post-title "Settings"]
 
-         (if (not (nil? @wiki-root-dir))
-           [:section
-            [:p "Your wiki is located at "[ :code @wiki-root-dir]]
-            [:button.btn.btn-default
-             {:on-click #(dispatch [:assoc-wiki-root-dir nil])}
-             "Unlink wiki"]]
-           [setup])]
+         [:section
+          [:h2 "Setup"]
+          (if (not (nil? @wiki-root-dir))
+            [:div
+             [:p "Kiwi is configured to use your wiki located at " [:code @wiki-root-dir] "."]
+             [:button.btn.btn-default
+              {:on-click #(dispatch [:assoc-wiki-root-dir nil])}
+              "Unlink wiki"]]
+            [kiwi.setup.views/setup])]]
         
         (when features/schedule-enabled?
           [:section

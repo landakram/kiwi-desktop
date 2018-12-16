@@ -57,12 +57,20 @@
    :backdrop-on-click #(dispatch [:hide-modal])])
 
 (defn base-layout [content]
-  (let [modal (subscribe [:modal])]
+  (let [modal (subscribe [:modal])
+        configured? (subscribe [:configured?])]
     (fn [content] 
-      [:div
-       [layout-header]
-       [:section.content-wrapper
-        [:div.content
-         content]]
-       (when @modal
-         (modals @modal))])))
+      (if (not @configured?)
+        [:div
+         [:div.header]
+         [:section.content-wrapper
+          [:div.content
+           [kiwi.setup.views/setup-page]]]]
+
+        [:div
+         [layout-header]
+         [:section.content-wrapper
+          [:div.content
+           content]]
+         (when @modal
+           (modals @modal))]))))

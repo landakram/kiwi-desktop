@@ -16,6 +16,7 @@
             [kiwi.editor.views]
             [kiwi.search.views]
             [kiwi.settings.views]
+            [kiwi.setup.views]
             [kiwi.page.views]
             [kiwi.page.modals]
             [kiwi.views :as views]

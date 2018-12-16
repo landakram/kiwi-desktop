@@ -75,5 +75,5 @@
               [link-with-google-button "Re-link with Google"]]
              [link-with-google-button])])
 
-        #_[keybindings-help]]])))
+        [keybindings-help]]])))
 

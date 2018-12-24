@@ -58,7 +58,7 @@
    [:h1.post-title "Welcome to Kiwi!"]
    [marketing-materials]
    [:button.btn.btn-default
-    {:on-click #(dispatch [:navigate-setup :find-wiki])}
+    {:on-click #(dispatch [:navigate-setup-next])}
     "Set up"]])
 
 (defn auto-wiki-setup []
@@ -101,11 +101,7 @@
 (defn find-wiki []
   (fn []
     [:section
-     (if (setup-utils/valid-wiki? setup-utils/default-wiki-path)
-       [auto-wiki-setup]
-       ;; TODO: could put this in a handler by just having it decide what to do
-       ;; and using an event like :navigate-setup-next or something
-       (dispatch [:navigate-setup :create-wiki]))]))
+     [auto-wiki-setup]]))
 
 
 (defn setup-page []

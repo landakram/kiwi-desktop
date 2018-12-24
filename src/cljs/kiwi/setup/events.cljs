@@ -10,6 +10,18 @@
 (def fs (js/require "fs-extra"))
 
 (reg-event-fx
+ :navigate-setup-next
+ (fn [{:keys [db]} [_]]
+   (let [route
+         (if (setup-utils/valid-wiki? setup-utils/default-wiki-path)
+           :find-wiki
+           :create-wiki)]
+     {:db
+      (-> db
+          (assoc :setup-state {:route route}))})))
+
+
+(reg-event-fx
  :navigate-setup
  (fn [{:keys [db]} [_ route]]
    {:db

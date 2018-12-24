@@ -63,8 +63,7 @@
              [:p "Kiwi is configured to use your wiki located at " [:code @wiki-root-dir] "."]
              [:button.btn.btn-default
               {:on-click #(dispatch [:assoc-wiki-root-dir nil])}
-              "Unlink wiki"]]
-            [kiwi.setup.views/setup])]]
+              "Unlink wiki"]])]]
         
         (when features/schedule-enabled?
           [:section

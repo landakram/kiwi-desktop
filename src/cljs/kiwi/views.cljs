@@ -60,17 +60,19 @@
   (let [modal (subscribe [:modal])
         configured? (subscribe [:configured?])]
     (fn [content] 
-      (if (not @configured?)
-        [:div
-         [:div.header]
-         [:section.content-wrapper
-          [:div.content
-           [kiwi.setup.views/setup-page]]]]
+      [:div
+       (if (not @configured?)
+         [:div
+          [:div.header]
+          [:section.content-wrapper
+           [:div.content
+            [kiwi.setup.views/setup-page]]]]
 
-        [:div
-         [layout-header]
-         [:section.content-wrapper
-          [:div.content
-           content]]
-         (when @modal
-           (modals @modal))]))))
+         [:div
+          [layout-header]
+          [:section.content-wrapper
+           [:div.content
+            content]]])
+       (when @modal
+         (modals @modal))])))
+

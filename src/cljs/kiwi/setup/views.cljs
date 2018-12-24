@@ -1,64 +1,45 @@
 (ns kiwi.setup.views
   (:require
    [re-frame.core :as re-frame :refer [dispatch subscribe]]
-   [re-com.core :as re-com]))
+   [re-com.core :as re-com]
+   [re-frame.db :refer [app-db]]
+   [kiwi.views :as views]
+   [kiwi.setup.utils :as setup-utils]))
 
 (def electron (js/require "electron"))
 (def shell (.-shell electron))
 (def remote (.-remote electron))
 (def dialog (.-dialog remote))
 
-(def fs (js/require "fs"))
-(def os (js/require "os"))
-(def default-wiki-path
-  (str (.-homedir (.userInfo os)) "/Dropbox/Apps/KiwiApp"))
-
-(defn file-exists? [path]
-  (try
-    (do
-      (.accessSync fs path)
-      true)
-    (catch :default e
-      false)))
-
-(defn auto-setup-alert []
+(defn auto-detect-dropbox-alert []
   [re-com/alert-box
    :alert-type :info
-   :heading "Wiki auto-detected."
+   :heading "Dropbox auto-detected."
    :body [:div
-          [:p "Looks like you already have a wiki at " [:code default-wiki-path] "."]
-          [:p "Would you like to configure Kiwi to use this wiki?"]
+          [:p "It looks like you have Dropbox already installed at " [:code setup-utils/default-dropbox-path] "."]
+          [:p "Would you like to create your wiki automatically inside Dropbox?"]
           [:button.btn.btn-default
-           {:on-click #(dispatch [:assoc-wiki-root-dir default-wiki-path])}
+           {:on-click #(dispatch [:set-up-wiki
+                                  (str setup-utils/default-dropbox-path "/Apps/KiwiApp")])}
            "Yes, please!"]]])
 
-(defn set-wiki-root-button [text]
-  (let [on-directory-chosen
-        (fn [directories]
-          (when (seq directories)
-            (dispatch [:assoc-wiki-root-dir (first (js->clj directories))])))]
-    [:button.btn.btn-default
+(defn create-wiki-button
+  ([text]
+   (create-wiki-button {} text))
+  ([opts text]
+   (let [on-directory-chosen
+         (fn [directories]
+           (when (seq directories)
+             (dispatch [:set-up-wiki (str
+                                      (first (js->clj directories))
+                                      (:append opts))])))]
+
+     [:button.btn.btn-default
       {:on-click (fn [_]
                    (.showOpenDialog dialog
                                     (clj->js {:properties ["openDirectory"]})
                                     on-directory-chosen))}
-      text]))
-
-
-(defn setup []
-  (fn []
-    [:section
-     (when (file-exists? default-wiki-path)
-       [auto-setup-alert])
-
-     [:div
-      [:p
-       "Configure Kiwi by telling it where to find your wiki. If you use Kiwi for iOS, your wiki is located at "
-       [:code "/Users/you/Dropbox/Apps/KiwiApp"]
-       "."]
-      [:div.btn-group
-       [set-wiki-root-button "Find existing wiki"]
-       [:button.btn.btn-default "Create new wiki"]]]]))
+      text])))
 
 (defn marketing-materials []
   (fn []
@@ -72,13 +53,66 @@
       [:li "Take your notes with you. Kiwi works offline and syncs automatically with Dropbox - you own your notes."]
       ]]))
 
-(defn setup-page []
-  (fn []
-    [:article#page.settings
-      [:section
-       [:h1.post-title "Welcome to Kiwi!"]
-       [marketing-materials]
+(defn setup-intro []
+  [:section
+   [:h1.post-title "Welcome to Kiwi!"]
+   [marketing-materials]
+   [:button.btn.btn-default
+    {:on-click #(dispatch [:navigate-setup :find-wiki])}
+    "Set up"]])
 
-       [:section
-        [:h2 "Setup"]
-        [setup]]]]))
+(defn auto-wiki-setup []
+  (fn []
+    [:div
+     [:h1 "Set up"]
+     [:h2 "Wiki auto-detected."]
+     [:p "Looks like you already have a wiki at " [:code setup-utils/default-wiki-path] "."]
+     [:p "Would you like to configure Kiwi to use this wiki?"]
+     [:div.btn-group
+      [:button.btn.btn-default
+       {:on-click #(dispatch [:set-up-wiki setup-utils/default-wiki-path])}
+       "Yes, use that"]
+      [:button.btn.btn-default
+       {:on-click #(dispatch [:navigate-setup :create-wiki])}
+       "No thanks"]]]))
+
+(defn create-wiki []
+  (fn []
+    [:div
+     [:h1 "Set up"]
+     [:h2 "Create your wiki"]
+     [:p "Let's get you set up with a wiki!"]
+     [:p "A wiki is a collection of markdown files in a special directory structure that Kiwi understands."]
+     [:h4 "Dropbox"]
+     [:p "Set up your wiki inside Dropbox and take it everywhere you go with Kiwi for iOS."]
+     (when (setup-utils/file-exists? setup-utils/default-dropbox-path)
+       [auto-detect-dropbox-alert])
+     [:p "Navigate to your Dropbox folder using the button below and Kiwi will do the rest."]
+     [create-wiki-button
+      {:append "/Apps/KiwiApp"}
+      "Select Dropbox folder"]
+     [:h4 "Elsewhere"]
+     [:p "You can set up a wiki anywhere on your filesystem. Navigate to a folder where you want your wiki to live and Kiwi will set it up for you."]
+     [create-wiki-button "Select wiki folder"]
+     [:h4 "Already have a wiki?"]
+     [:p "Welcome back. Tell Kiwi where it is using the button below."]
+     [create-wiki-button "Link existing wiki"]]))
+
+(defn find-wiki []
+  (fn []
+    [:section
+     (if (setup-utils/valid-wiki? setup-utils/default-wiki-path)
+       [auto-wiki-setup]
+       ;; TODO: could put this in a handler by just having it decide what to do
+       ;; and using an event like :navigate-setup-next or something
+       (dispatch [:navigate-setup :create-wiki]))]))
+
+
+(defn setup-page []
+  (let [setup-route (subscribe [:setup-route])]
+    (fn []
+      [:article#page.settings
+       (case @setup-route
+         :find-wiki [find-wiki]
+         :create-wiki [create-wiki]
+         [setup-intro])])))

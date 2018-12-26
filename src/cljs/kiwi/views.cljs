@@ -1,9 +1,9 @@
 (ns kiwi.views
   (:require 
    [re-frame.core :as re-frame :refer [after dispatch dispatch-sync enrich path register-handler register-sub subscribe]]
-   [kiwi.routes :as routes]
    [re-com.core :as re-com]
    [clojure.string :as string]
+   [kiwi.routes :as routes]
    [kiwi.page.core :as page]
    [kiwi.db :as page-db]
    [kiwi.features :as features])
@@ -57,12 +57,22 @@
    :backdrop-on-click #(dispatch [:hide-modal])])
 
 (defn base-layout [content]
-  (let [modal (subscribe [:modal])]
+  (let [modal (subscribe [:modal])
+        configured? (subscribe [:configured?])]
     (fn [content] 
       [:div
-       [layout-header]
-       [:section.content-wrapper
-        [:div.content
-         content]]
+       (if (not @configured?)
+         [:div
+          [:div.header]
+          [:section.content-wrapper
+           [:div.content
+            [kiwi.setup.views/setup-page]]]]
+
+         [:div
+          [layout-header]
+          [:section.content-wrapper
+           [:div.content
+            content]]])
        (when @modal
          (modals @modal))])))
+

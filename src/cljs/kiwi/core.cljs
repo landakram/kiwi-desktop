@@ -16,6 +16,7 @@
             [kiwi.editor.views]
             [kiwi.search.views]
             [kiwi.settings.views]
+            [kiwi.setup.views]
             [kiwi.page.views]
             [kiwi.page.modals]
             [kiwi.views :as views]
@@ -84,7 +85,8 @@
   (enable-console-print!)
   (set! *warn-on-infer* true)
   (hook-browser-navigation!)
-  (let [wiki-root-dir (storage/load "wiki-root-dir")
+  (let [wiki-root-d (storage/load "wiki-root-dir")
+        wiki-root-dir (if (= "null" wiki-root-d) nil wiki-root-d)
         google-access-token (storage/load "google-access-token")]
     (dispatch-sync [:initialize
                     {:wiki-root-dir wiki-root-dir
@@ -92,6 +94,7 @@
     (register-keybindings!)
 
     (if (not (nil? wiki-root-dir))
-      (dispatch [:set-route (routes/page-route {:permalink "home"})])
-      (dispatch [:set-route (routes/settings-route)]))
+      (dispatch-sync [:set-route (routes/page-route {:permalink "home"})])
+      (dispatch-sync [:set-route (routes/settings-route)]))
     (render)))
+

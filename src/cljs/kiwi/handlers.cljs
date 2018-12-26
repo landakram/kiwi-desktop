@@ -9,6 +9,7 @@
             [kiwi.editor.events]
             [kiwi.search.events]
             [kiwi.settings.events]
+            [kiwi.setup.events]
             [kiwi.page.events]
             [re-frame.core
              :as

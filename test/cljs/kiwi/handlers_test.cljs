@@ -1,6 +1,7 @@
 (ns kiwi.handlers-test
   (:require [kiwi.handlers :as sut]
             [kiwi.core]
+            [kiwi.test.utils :as t]
             [re-frame.core :as r] 
             [day8.re-frame.test :as rf-test]
             [devcards.core :refer-macros [deftest]]
@@ -30,14 +31,10 @@
        (r/dispatch [:navigate [:some-page] {:path ""}])
        (is (= @current-route [:some-page]))))))
 
-(defn capture-into [atm]
-  (fn [arg]
-    (reset! atm arg)))
-
 (deftest test-set-route
   (let [arg (atom nil)]
     (rf-test/run-test-sync
-     (r/reg-fx :set-hash (capture-into arg))
+     (r/reg-fx :set-hash (t/capture-into arg))
      (r/dispatch [:initialize])
 
      (testing "causes a set-hash effect"
@@ -58,7 +55,7 @@
 (deftest test-assoc-google-access-token
   (let [arg (atom nil)]
     (rf-test/run-test-sync
-     (r/reg-fx :storage-save (capture-into arg))
+     (r/reg-fx :storage-save (t/capture-into arg))
      (r/dispatch [:initialize])
 
      (testing "sets access token in state and saves to storage"

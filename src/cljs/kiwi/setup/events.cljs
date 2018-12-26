@@ -4,16 +4,34 @@
     :as
     re-frame
     :refer
-    [dispatch after enrich path reg-event-db reg-event-fx reg-fx]]
+    [dispatch after enrich path reg-event-db reg-event-fx reg-fx reg-cofx inject-cofx]]
    [kiwi.setup.utils :as setup-utils]))
 
 (def fs (js/require "fs-extra"))
 
+(reg-cofx
+ :default-wiki-path
+ (fn [coeffects _]
+   (assoc coeffects :default-wiki-path setup-utils/default-wiki-path)))
+
+;; Seems like a misuse of cofx, but it makes
+;; testing easier because we can stub it, so whatever.
+;;
+;; Then again, the valid-wiki? function internally is
+;; not actually pure (uses the fs module), so it kind of
+;; makes sense that it would be considered a coeffect.
+(reg-cofx
+ :valid-wiki?
+ (fn [coeffects _]
+   (assoc coeffects :valid-wiki? setup-utils/valid-wiki?)))
+
 (reg-event-fx
  :navigate-setup-next
- (fn [{:keys [db]} [_]]
+ [(inject-cofx :default-wiki-path)
+  (inject-cofx :valid-wiki?)]
+ (fn [{:keys [db default-wiki-path valid-wiki?] :as cofx} [_]]
    (let [route
-         (if (setup-utils/valid-wiki? setup-utils/default-wiki-path)
+         (if (valid-wiki? default-wiki-path)
            :find-wiki
            :create-wiki)]
      {:db
@@ -58,9 +76,9 @@
 (reg-event-fx 
  :finish-setup
  (fn [{:keys [db]} [_ root-dir]]
-   (dispatch [:assoc-wiki-root-dir root-dir])
-   (dispatch [:show-page "home"])
-   {:db (dissoc db :setup-state)}))
+   {:db (dissoc db :setup-state)
+    :dispatch-n [[:assoc-wiki-root-dir root-dir]
+                 [:show-page "home"]]}))
 
 (reg-fx
  :set-up-wiki

@@ -1,2 +1,2 @@
-**/resources/src/vendor/** linguist-vendored
-**/resources/public/css/main.css linguist-generated
+resources/src/vendor/** linguist-generated=true
+resources/public/css/main.css linguist-generated=true

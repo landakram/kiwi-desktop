@@ -15,7 +15,7 @@
     el))
 
 (defn img-tag->path [root-dir img-tag]
-  (let [src (string/lower-case (.-src img-tag))
+  (let [src (.-src img-tag)
         filename (path->filename src)
         path (str root-dir "/" page-db/img-rel-path filename)]
     path))

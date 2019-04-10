@@ -5,7 +5,6 @@
             [kiwi.setup.events-test]
             [kiwi.editor.events-test]))
 
-
 (defn run []
   (run-tests 'kiwi.handlers-test
              'kiwi.settings.events-test

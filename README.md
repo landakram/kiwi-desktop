@@ -20,6 +20,16 @@ electron resources/public/tests.html
 
 Tests are automatically re-run after every hot reload.
 
+### Devcards
+
+Devcards can also be used in development. 
+
+After starting figwheel, open devcards in electron by running: 
+
+```sh
+electron resources/public/devcards.html 
+```
+
 ## Release builds
 
 Compile for releases and create a built electron app with: 

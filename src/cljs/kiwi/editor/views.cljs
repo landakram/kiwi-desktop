@@ -8,7 +8,7 @@
 (def fs (js/require "fs"))
 
 (defn- page-title-field [page]
-  (let [{:keys [title]} @page]
+  (let [{:keys [title]} page]
     [:h1.post-title title]))
 
 (defn drag-enter [e local-state]
@@ -148,9 +148,17 @@
                     (swap! local-state assoc :value new-value)
                     (on-change new-value))))))})))
 
-(defn editor [{:keys [page editing]}]
+(defn editor* [{:keys [page contents on-change]}]
   [:div#edit-container 
-    [:div#edit
-     [page-title-field page]
-     [page-content-field {:contents @(subscribe [:edited-contents])
-                          :on-change #(dispatch-sync [:edit-page %])}]]])
+   [:div#edit
+    [page-title-field page]
+    [page-content-field {:contents contents
+                         :on-change on-change}]]])
+
+(defn editor [{:keys [page editing]}]
+  (let [contents (subscribe [:edited-contents])
+        on-change #(dispatch-sync [:edit-page %])]
+    (fn [{:keys [page editing]}]
+      [editor* {:page page
+                :contents @contents
+                :on-change on-change}])))

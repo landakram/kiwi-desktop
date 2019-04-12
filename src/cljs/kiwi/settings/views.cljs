@@ -13,8 +13,6 @@
    [reagent.ratom :refer [reaction]])
   )
 
-
-
 (defn link-with-google-button
   ([text]
    [:button.btn.btn-default

@@ -1,8 +1,7 @@
 (ns kiwi.setup.events-test
   (:require [kiwi.setup.events :as sut]
             [kiwi.test.utils :as t]
-            [cljs.test :refer-macros [is testing run-tests]]
-            [devcards.core :refer-macros [deftest]]
+            [cljs.test :refer-macros [deftest is testing run-tests]]
             [day8.re-frame.test :as rf-test]
             [re-frame.core :as r]
             [kiwi.utils :as utils]))

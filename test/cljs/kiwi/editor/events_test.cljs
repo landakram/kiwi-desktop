@@ -3,8 +3,7 @@
             [kiwi.core]
             [re-frame.core :as r] 
             [day8.re-frame.test :as rf-test]
-            [devcards.core :refer-macros [deftest]]
-            [cljs.test :refer-macros [is testing run-tests]]))
+            [cljs.test :refer-macros [deftest is testing run-tests]]))
 
 (deftest test-editing
   (let [editing? (r/subscribe [:editing?])

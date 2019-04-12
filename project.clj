@@ -51,7 +51,7 @@
                                    :pretty-print true
                                    :cache-analysis true}}
                        {:id           "release"
-                        :source-paths ["src/clj" "src/cljs/kiwi" "src/cljc"]
+                        :source-paths ["src/cljs/kiwi"]
                         :compiler     {:output-to     "resources/public/js/app.js"
                                        :output-dir    "resources/public/js/app-release"
                                        :asset-path    "js/app-release"
@@ -75,5 +75,5 @@
                                   [com.bhauman/figwheel-main "0.2.0"]
                                   [com.bhauman/cljs-test-display "0.1.1"]
                                   [day8.re-frame/re-frame-10x "0.4.0"]]
-                   :source-paths ["src/clj" "src/cljs" "src/cljc"]
+                   :source-paths ["src/cljs"]
                    :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}})

@@ -1,6 +1,8 @@
-^{:watch-dirs ["src" "test"]
-  :extra-main-files {:tests {:main runners.browser}}}
+^{:watch-dirs ["src" "test" "cards"]
+  :extra-main-files {:tests {:main runners.browser}
+                     :devcards {:main cards.kiwi.core}}}
 {:main kiwi.core
+ :devcards true
  :closure-defines {"re_frame.trace.trace_enabled_QMARK_" true}
  :preloads [devtools.preload
             day8.re-frame-10x.preload]

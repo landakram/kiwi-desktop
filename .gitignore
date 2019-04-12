@@ -10,6 +10,7 @@ pom.xml.asc
 /.nrepl-port
 /resources/public/js/app.js
 /resources/public/js/app-tests.js
+/resources/public/js/app-devcards.js
 /resources/public/js/app.js.map
 /resources/public/js/app-release
 /resources/public/js/electron-release

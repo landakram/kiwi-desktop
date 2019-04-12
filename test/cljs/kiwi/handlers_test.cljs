@@ -4,8 +4,7 @@
             [kiwi.test.utils :as t]
             [re-frame.core :as r] 
             [day8.re-frame.test :as rf-test]
-            [devcards.core :refer-macros [deftest]]
-            [cljs.test :refer-macros [is testing run-tests]]
+            [cljs.test :refer-macros [deftest is testing run-tests]]
             [kiwi.routes :as routes]
             [kiwi.page.core :as page]))
 
@@ -18,7 +17,6 @@
        (is (= @modal nil))
        (r/dispatch [:show-modal :modal-id])
        (is (= @modal :modal-id))))))
-
 
 (deftest test-navigate
   (rf-test/run-test-sync

@@ -4,33 +4,22 @@
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/clojure "1.8.0"]
-                 [ring-server "0.4.0"]
-                 [reagent "0.6.0"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
+                 [reagent "0.8.1"]
                  [reagent-forms "0.5.11"]
                  [reagent-utils "0.1.5"]
-                 [ring "1.4.0"]
-                 [ring/ring-defaults "0.1.5"]
-                 [prone "0.8.2"]
-                 [compojure "1.4.0"]
                  [hiccup "1.0.5"]
-                 [environ "1.0.1"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [org.clojure/clojurescript "1.10.339" :scope "provided"]
                  [kibu/pushy "0.3.3"]
-                 [re-frame "0.9.4"]
+                 [re-frame "0.10.6"]
                  [day8.re-frame/test "0.1.5"]
                  [re-com "1.0.0"]
                  [secretary "1.2.3"]
-                 ;; Uses the devcards iframe fork here:
-                 ;; https://github.com/nberger/devcards/tree/iframe
-                 [devcards "0.2.4-SNAPSHOT"]
                  [com.andrewmcveigh/cljs-time "0.5.0"]
                  [binaryage/devtools "0.9.4"]]
 
-  :plugins [[lein-environ "1.0.1"]
-            [lein-cljsbuild "1.1.6"]
-            [lein-figwheel "0.5.11"]
+  :plugins [[lein-cljsbuild "1.1.6"]
             [lein-asset-minifier "0.2.2"]]
 
   :min-lein-version "2.5.0"
@@ -44,48 +33,23 @@
                                     "resources/public/js/electron-release"
                                     "resources/public/js/electron-dev"]
 
-  :source-paths ["src/clj" "src/cljc" "src/cljs"]
+  :source-paths ["src" "test"]
   :test-paths ["test/cljs"]
 
   :minify-assets
   {:assets
    {"resources/public/css/site.min.css" "resources/public/css/site.css"}}
 
-  :cljsbuild {:builds [{:id           "dev"
-                        :source-paths ["src/clj"
-                                       "src/cljs"
-                                       "src/cljc"
-                                       "env/dev/cljs"
-                                       "test/cljs"]
-                        :figwheel     {:on-jsload "kiwi.core/render"}
-                        :compiler     {:output-to     "resources/public/js/app.js"
-                                       :output-dir    "resources/public/js/out"
-                                       :asset-path    "js/out"
-                                       :preloads [devtools.preload]
-                                       :main          "kiwi.core"
-                                       :optimizations :none
-                                       :source-map    true
-                                       :pretty-print  true}}
-                       {:id "electron-dev"
+  :aliases
+  {"fig" ["trampoline" "run" "-m" "figwheel.main" "-b" "dev"]}
+
+  :cljsbuild {:builds [{:id "electron-dev"
                         :source-paths ["src/cljs/electron"]
                         :compiler {:output-to "resources/main.js"
                                    :output-dir "resources/public/js/electron-dev"
                                    :optimizations :simple
                                    :pretty-print true
                                    :cache-analysis true}}
-                       {:id "devcards-test"
-                        :source-paths ["src"
-                                       "test"
-                                       "env/dev"]
-                        :figwheel {:devcards true}
-                        :compiler {:main runners.browser
-                                   :optimizations :none
-                                   :asset-path "js/tests/out"
-                                   :preloads [devtools.preload]
-                                   :output-dir "resources/public/js/tests/out"
-                                   :output-to "resources/public/js/tests/all-tests.js"
-                                   :source-map-timestamp true}}
-
                        {:id           "release"
                         :source-paths ["src/clj" "src/cljs/kiwi" "src/cljc"]
                         :compiler     {:output-to     "resources/public/js/app.js"
@@ -105,16 +69,11 @@
                                    :optimizations :advanced
                                    :pretty-print true
                                    :cache-analysis true
-                                   :infer-externs true}}
-                       ]
-              }
+                                   :infer-externs true}}]}
 
-  :figwheel {:http-server-root "public"
-             :css-dirs         ["resources/public/css"]
-             :server-port      3449}
-
-  :profiles {:dev {:dependencies [[figwheel-sidecar "0.5.16"]
-                                  [cider/piggieback "0.3.1"]]
-                   :source-paths ["src/clj" "src/cljs" "src/cljc" "env/dev/cljs"]
-                   :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
-                   :env          {:dev true}}})
+  :profiles {:dev {:dependencies [[cider/piggieback "0.3.1"]
+                                  [com.bhauman/figwheel-main "0.2.0"]
+                                  [com.bhauman/cljs-test-display "0.1.1"]
+                                  [day8.re-frame/re-frame-10x "0.4.0"]]
+                   :source-paths ["src/clj" "src/cljs" "src/cljc"]
+                   :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}})

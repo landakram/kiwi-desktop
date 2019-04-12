@@ -9,6 +9,7 @@ pom.xml.asc
 /.lein-*
 /.nrepl-port
 /resources/public/js/app.js
+/resources/public/js/app-tests.js
 /resources/public/js/app.js.map
 /resources/public/js/app-release
 /resources/public/js/electron-release
@@ -26,3 +27,4 @@ node_modules
 .DS_Store
 
 dist
+.cpcache

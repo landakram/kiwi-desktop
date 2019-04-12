@@ -1,0 +1,12 @@
+^{:watch-dirs ["src" "test"]
+  :extra-main-files {:tests {:main runners.browser}}}
+{:main kiwi.core
+ :closure-defines {"re_frame.trace.trace_enabled_QMARK_" true}
+ :preloads [devtools.preload
+            day8.re-frame-10x.preload]
+ :optimizations :none
+ :output-to     "resources/public/js/app.js"
+ :output-dir    "resources/public/js/out"
+ :asset-path    "js/out"
+ :source-map    true
+ :pretty-print  true}

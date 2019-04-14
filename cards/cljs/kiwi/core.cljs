@@ -21,18 +21,21 @@
 (defn prose-editor []
   (let [state (atom {})]
     (reagent/create-class
-     {:should-component-update #(false)
+     {:should-component-update (fn [this] false)
       :component-did-mount
       (fn [this]
         (let [{:keys [editor-state on-editor-state-change]} (reagent/props this)
               node (reagent/dom-node this)
               dispatch-tx (fn [tx]
-                            (let [new-state (editor-state.apply tx)
+                            (let [{:keys [editor-state]} (reagent/props this)
+                                  new-state (.apply editor-state tx)
                                   editor (:editor @state)]
-                              (editor.updateState new-state)
+                              (print "dispatch-tx")
+                              ;; We let component-will-receive-props actually update editor-state
                               (on-editor-state-change new-state)))
               editor (EditorView. node (clj->js {:state editor-state
-                                                 :dispatch-transaction dispatch-tx}))]
+                                                 :dispatchTransaction dispatch-tx}))]
+          (print "component-did-mount")
           (swap! state assoc :editor editor)))
       :component-will-unmount
       (fn [this]
@@ -41,8 +44,13 @@
       :component-will-receive-props
       (fn [this new-argv]
         (let [editor (:editor @state)
-              next-props (reagent.impl.component/extract-props new-argv)]
-          (editor.updateState (.-editor-state next-props)))
+              {:keys [editor-state]} (reagent/props this)
+              next-props (reagent.impl.component/extract-props new-argv)
+              new-editor-state (:editor-state next-props)]
+          (print "component-will-receive-props")
+          (when (not (= editor-state new-editor-state))
+            (print "updating state")
+            (.updateState editor (:editor-state next-props))))
         )
       :reagent-render
       (fn []
@@ -57,16 +65,15 @@
 (defn text-editor []
   (fn []
     (let [editor-state (:editor-state @text-editor-state)
-          on-editor-state-change #(swap! text-editor-state assoc :editor-state %)]
+          on-editor-state-change (fn [state]
+                                   (print "on-editor-state-change")
+                                   (swap! text-editor-state assoc :editor-state state))]
       [prose-editor {:editor-state editor-state
                      :on-editor-state-change on-editor-state-change}])))
 
 
 (defcard-rg prosemirror-editor
-  "Testing out prosemirror. 
-
-   **TODO:** upon hot-reload the editor state is cleared. Not sure if this is because of 
-   the way I've wrapped Prosemirror / react, or a misuse of devcards."
+  "Testing out prosemirror."
   [:div
    [text-editor]])
 

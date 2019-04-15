@@ -1,6 +1,7 @@
 ^{:watch-dirs ["src" "test" "cards"]
   :extra-main-files {:tests {:main runners.browser}
-                     :devcards {:main cards.kiwi.core}}}
+                     :devcards {:main cards.kiwi.core}}
+  :npm {:bundles {"dist/index.bundle.js" "src/js/index.js"}}}
 {:main kiwi.core
  :devcards true
  :closure-defines {"re_frame.trace.trace_enabled_QMARK_" true}

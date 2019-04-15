@@ -2,7 +2,8 @@
   (:require
    [devcards.core :refer-macros [defcard defcard-rg]]
    [reagent.core :as reagent]
-   [kiwi.core]))
+   [kiwi.core]
+   [kiwi-schema]))
 
 (defonce contents (reagent/atom "# First heading\n\n## Second heading\n\nThis is editor contents."))
 
@@ -12,11 +13,13 @@
 (def prosemirror-state (js/require "prosemirror-state"))
 (def EditorState (.-EditorState prosemirror-state))
 
-(def prosemirror-schema (js/require "prosemirror-schema-basic"))
-(def schema (.-schema prosemirror-schema))
-
 (def prosemirror-example-setup (js/require "prosemirror-example-setup"))
 (def exampleSetup (.-exampleSetup prosemirror-example-setup))
+
+(def prosemirror-model (js/require "prosemirror-model"))
+(def Schema (.-Schema prosemirror-model))
+
+(def schema (Schema. kiwi-schema/schema))
 
 (defn prose-editor []
   (let [state (atom {})]
@@ -73,7 +76,15 @@
 
 
 (defcard-rg prosemirror-editor
-  "Testing out prosemirror."
+  "Testing out prosemirror.
+
+   Note that `kiwi-schema` comes from JavaScript that is compiled by webpack.
+   
+   It's convenient to run `npx webpack -w` while iterating on JavaScript stuff.
+   
+   We define the schema in JavaScript because ProseMirror relies on the ordering 
+   of the schema. Clojure maps are unordered (and actually re-order keys), so when we try 
+   to define the schema as a Clojure map, unexpected nodes in the schema get precedent."
   [:div
    [text-editor]])
 

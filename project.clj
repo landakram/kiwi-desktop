@@ -17,6 +17,7 @@
                  [re-com "1.0.0"]
                  [secretary "1.2.3"]
                  [devcards "0.2.6"]
+                 [binaryage/oops "0.7.0"]
                  [com.andrewmcveigh/cljs-time "0.5.0"]
                  [binaryage/devtools "0.9.4"]]
 

@@ -1,7 +1,7 @@
 (ns cards.kiwi.core
   (:require
    [oops.core :refer [oset! oset!+]]
-   [devcards.core :refer-macros [defcard defcard-rg]]
+   [devcards.core :refer-macros [defcard defcard-rg defcard-doc]]
    [reagent.core :as reagent]
    [kiwi.core]))
 
@@ -246,21 +246,72 @@
                      :on-editor-state-change on-editor-state-change}])))
 
 
-(defcard-rg prosemirror-editor
-  "Testing out prosemirror.
+(defcard-doc
+  "### ProseMirror
 
-   Note that `kiwi-schema` comes from JavaScript that is compiled by webpack.
+ProseMirror is a editor framework for building WYSIWYG editors.
+
+I want to see if I can replace CodeMirror with a custom ProseMirror editor, as 
+I'd like to be able to edit the wiki directly without needing to switch between
+view and edit.")
+
+(defcard-rg prosemirror-editor
+  "Here's an editor using ProseMirror.
+
+   Note that a `kiwi-schema` namespace is exposed from JavaScript that is compiled by webpack. 
+   (It's convenient to run `npx webpack -w` while iterating on JavaScript stuff.)
    
-   It's convenient to run `npx webpack -w` while iterating on JavaScript stuff.
-   
-   We define the schema in JavaScript because ProseMirror relies on the ordering 
+   We previusly defined the schema in JavaScript because ProseMirror relies on the ordering 
    of the schema. Clojure maps are unordered (and actually re-order keys), so when we try 
    to define the schema as a Clojure map, unexpected nodes in the schema get precedent.
 
-   Come to think of it, we could define the schema in cljs as an array and then 
-   write a custom function that builds the js object from that... this commit does just that."
+   But as of `805cd11`, we just define the schema in cljs as an array and then 
+   write a custom function that builds the js object from that."
+
   [:div
    [text-editor]])
+
+(defcard-doc
+  "### Interop between ProseMirror and mdast
+
+   Kiwi currently uses [remark](https://github.com/remarkjs/remark) and 
+   [mdast](https://github.com/syntax-tree/mdast#nodes) to parse, manipulate, and extend markdown.
+
+   For example, task-list checkboxes are implemented as a remark plugin, 
+   [remark-task-list](https://github.com/landakram/remark-task-list). 
+
+   If I want to support using either style of editor in settings, then I might as well
+   make it so the schemas can adapt to each other.
+
+   Doing this isn't strictly necessary... I could just go straight to/from markdown. But remark
+   already parses markdown into a known, high-level AST that I like. 
+
+   It's also an interesting exercise.
+")
+
+(defcard mdast-schema-example
+  "Here's an example of an AST of `*Hi*` using mdast:"
+  (kiwi.markdown-processors/get-ast "*Hi*"))
+
+(defcard-doc
+  "I want to provide bi-directional translation between schemas.
+
+   To start, we fully enumerating all node types: 
+
+   **TODO**")
+
+(defcard-doc
+  "Other useful links: 
+
+* [prosemirror-markdown md -> schema](https://github.com/ProseMirror/prosemirror-markdown/blob/master/src/from_markdown.js)
+* [ProseMirror schema docs](https://prosemirror.net/docs/guide/#schema). Note that documents are built using the 
+  schema object (i.e. `schema.node(\"doc\"...)`)")
+
+(defcard-doc
+  "### CodeMirror
+
+   For comparison, here is the current editor.
+")
 
 (defcard-rg page-editor
   "This is the editor used to edit wiki pages."

@@ -14,9 +14,9 @@
 (defn ast-processor [permalinks]
   (let [^js/unified ast-processor
         (-> (unified)
-            (.use markdown (clj->js {:gfm true :footnotes true :yaml true}))
-            (.use task-list-plugin (clj->js {}))
-            (.use wiki-link-plugin (clj->js {"permalinks" permalinks}))
+            (.use markdown #js {:gfm true :footnotes true :yaml true})
+            (.use task-list-plugin #js {})
+            (.use wiki-link-plugin #js {"permalinks" permalinks})
             (.use yaml-plugin))]
     ast-processor))
 
@@ -28,10 +28,10 @@
 
 (defn checkbox-toggling-processor [checkbox-id]
   (-> ^js/unified (unified)
-      (.use markdown (clj->js {:gfm true :footnotes true :yaml true}))
-      (.use md-stringify (clj->js {:listItemIndent "1"}))
-      (.use task-list-plugin (clj->js {:toggle [checkbox-id]}))
-      (.use wiki-link-plugin (clj->js {}))
+      (.use markdown #js {:gfm true :footnotes true :yaml true})
+      (.use md-stringify #js {:listItemIndent "1"})
+      (.use task-list-plugin #js {:toggle #js [checkbox-id]})
+      (.use wiki-link-plugin #js {})
       (.use yaml-plugin)))
 
 (def ast-map (js/require "unist-util-map"))

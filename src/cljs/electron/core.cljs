@@ -16,6 +16,8 @@
 (electron-debug (clj->js { :enabled true }))
 (def main-window (atom nil))
 
+(goog-define start-page "/public/index.html#/page/home")
+
 (defn handle-swipe [e direction]
   (let [web-contents (.-webContents ^js/electron.BrowserWindow @main-window)]
     (cond 
@@ -37,7 +39,7 @@
                                       {:nodeIntegration true}})))
 
                                         ; Path is relative to the compiled js file (main.js in our case)
-       (.loadURL ^js/electron.BrowserWindow @main-window (str "file://" js/__dirname "/public/index.html#/page/home"))
+       (.loadURL ^js/electron.BrowserWindow @main-window (str "file://" js/__dirname start-page))
        (.on ^js/electron.BrowserWindow @main-window "swipe" handle-swipe)
 
        #_ (.openDevTools (.-webContents ^js/electron.BrowserWindow @main-window))

@@ -51,6 +51,26 @@
                                    :optimizations :simple
                                    :pretty-print true
                                    :cache-analysis true}}
+                       {:id "electron-dev-tests"
+                        :source-paths ["src/cljs/electron"]
+                        :compiler {:output-to "resources/main-tests.js"
+                                   :output-dir "resources/public/js/electron-dev-tests"
+                                   :optimizations :simple
+                                   :pretty-print true
+                                   :cache-analysis true
+                                   :closure-defines {electron.core/start-page
+                                                     "/public/tests.html"}
+                                   }}
+                       {:id "electron-dev-devcards"
+                        :source-paths ["src/cljs/electron"]
+                        :compiler {:output-to "resources/main-devcards.js"
+                                   :output-dir "resources/public/js/electron-dev-devcards"
+                                   :optimizations :simple
+                                   :pretty-print true
+                                   :cache-analysis true
+                                   :closure-defines {electron.core/start-page
+                                                     "/public/devcards.html"}
+                                   }}
                        {:id           "release"
                         :source-paths ["src/cljs/kiwi"]
                         :compiler     {:output-to     "resources/public/js/app.js"

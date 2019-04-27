@@ -97,4 +97,3 @@
       (dispatch-sync [:set-route (routes/page-route {:permalink "home"})])
       (dispatch-sync [:set-route (routes/settings-route)]))
     (render)))
-

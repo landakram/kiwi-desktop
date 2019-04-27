@@ -22,9 +22,10 @@
     "dist": "lein clean && lein cljsbuild once release electron-release && electron-builder"
   },
   "devDependencies": {
-    "electron-builder": "^19.6.3",
-    "electron-packager": "^8.7.2",
-    "electron-prebuilt": "^1.4.13"
+    "electron": "^5.0.0",
+    "electron-builder": "^20.39.0",
+    "webpack": "^4.30.0",
+    "webpack-cli": "^3.3.1"
   },
   "dependencies": {
     "electron-context-menu": "^0.9.1",
@@ -44,11 +45,11 @@
     "rehype-stringify": "^3.0.0",
     "remark": "^7.0.1",
     "remark-parse": "^3.0.1",
-    "remark-parse-yaml": "^0.0.1",
+    "remark-parse-yaml": "^0.0.2",
     "remark-rehype": "^2.0.1",
     "remark-stringify": "^3.0.1",
-    "remark-task-list": "^0.0.2",
-    "remark-wiki-link": "^0.0.1",
+    "remark-task-list": "^0.0.3",
+    "remark-wiki-link": "^0.0.3",
     "sugar-date": "^2.0.4",
     "unified": "^6.1.5",
     "unist-util-map": "^1.0.3"

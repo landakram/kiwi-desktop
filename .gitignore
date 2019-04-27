@@ -15,6 +15,7 @@ pom.xml.asc
 /resources/public/js/app-release
 /resources/public/js/electron-release
 /resources/public/js/electron-dev
+/resources/public/js/electron-dev-*
 /resources/public/js/out
 /resources/public/js/tests
 /Kiwi-darwin-*
@@ -24,6 +25,7 @@ pom.xml.asc
 /.env
 *.un~
 resources/main.js
+resources/main-*.js
 node_modules
 .DS_Store
 

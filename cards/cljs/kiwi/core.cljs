@@ -18,6 +18,7 @@
 
 (def prosemirror-model (js/require "prosemirror-model"))
 (def Schema (.-Schema prosemirror-model))
+(def Fragment (.-Fragment prosemirror-model))
 
 (defn compile-schema [schema]
   (let [js-schema #js {:nodes #js {}
@@ -195,7 +196,7 @@
 (defn prose-editor []
   (let [state (atom {})]
     (reagent/create-class
-     {:should-component-update (fn [this] false)
+     {:should-component-update (fn [this])
       :component-did-mount
       (fn [this]
         (let [{:keys [editor-state on-editor-state-change]} (reagent/props this)
@@ -230,18 +231,19 @@
       (fn []
         [:div])})))
 
-(defonce text-editor-state
-  (reagent/atom
-   {:editor-state
-    (EditorState.create (clj->js {:schema schema
-                                  :plugins (exampleSetup (clj->js {:schema schema}))}))}))
+(defn text-editor-state [doc]
+  {:editor-state
+   (EditorState.create (clj->js {:schema schema
+                                 :doc doc
+                                 :plugins (exampleSetup (clj->js {:schema schema}))}))})
 
-(defn text-editor []
+(defonce editor-state-1 (reagent/atom (text-editor-state nil)))
+(defn text-editor [state]
   (fn []
-    (let [editor-state (:editor-state @text-editor-state)
-          on-editor-state-change (fn [state]
+    (let [editor-state (:editor-state @state)
+          on-editor-state-change (fn [s]
                                    (print "on-editor-state-change")
-                                   (swap! text-editor-state assoc :editor-state state))]
+                                   (swap! state assoc :editor-state s))]
       [prose-editor {:editor-state editor-state
                      :on-editor-state-change on-editor-state-change}])))
 
@@ -269,7 +271,7 @@ view and edit.")
    write a custom function that builds the js object from that."
 
   [:div
-   [text-editor]])
+   [text-editor editor-state-1]])
 
 (defcard-doc
   "### Interop between ProseMirror and mdast
@@ -290,8 +292,8 @@ view and edit.")
 ")
 
 (defcard mdast-schema-example
-  "Here's an example of an AST of `*Hi*` using mdast:"
-  (kiwi.markdown-processors/get-ast "*Hi*"))
+  "Here's an example of an AST of `Hi` using mdast:"
+  (kiwi.markdown-processors/get-ast "Hi"))
 
 (defcard-doc
   "I want to provide bi-directional translation between schemas.
@@ -299,6 +301,163 @@ view and edit.")
    To start, we fully enumerating all node types: 
 
    **TODO**")
+
+(defn schema-frag [nodes]
+  (.from Fragment nodes))
+
+(defn schema-node [schema type attrs content marks]
+  (.node schema type (clj->js attrs) (clj->js content) (clj->js marks)))
+
+(defmulti to-prosemirror-schema
+  (fn [mdast-node]
+    (:type mdast-node)))
+
+(defmethod to-prosemirror-schema "root" [node schema]
+  (schema-node
+   schema
+   "doc"
+   nil
+   (map #(to-prosemirror-schema % schema) (:children node))
+   (or (:active-marks node) [])))
+
+(defmethod to-prosemirror-schema "paragraph" [node schema]
+  (schema-node
+   schema
+   "paragraph"
+   nil
+   (map #(to-prosemirror-schema % schema) (:children node))
+   (or (:active-marks node) [])))
+
+(defmethod to-prosemirror-schema "heading" [node schema]
+  (schema-node
+   schema
+   "heading"
+   {:level (:depth node)}
+   (map #(to-prosemirror-schema % schema) (:children node))
+   (or (:active-marks node) [])))
+
+(defmethod to-prosemirror-schema "thematicBreak" [node schema]
+  (schema-node
+   schema
+   "horizontal_rule"
+   nil
+   []
+   (or (:active-marks node) [])))
+
+(defmethod to-prosemirror-schema "break" [node schema]
+  (schema-node
+   schema
+   "hard_break"
+   nil
+   []
+   (or (:active-marks node) [])))
+
+(defmethod to-prosemirror-schema "blockquote" [node schema]
+  (schema-node
+   schema
+   "blockquote"
+   nil
+   (map #(to-prosemirror-schema % schema) (:children node))
+   (or (:active-marks node) [])))
+
+(defmethod to-prosemirror-schema "list" [node schema]
+  ;; Note: not handling `checked` attr for now.
+  (let [node-type (if (:ordered node) "ordered_list" "bullet_list")]
+    (schema-node
+     schema
+     node-type
+     nil ;; Note: not handling `spread` attr for now.
+     (map #(to-prosemirror-schema % schema) (:children node))
+     [])))
+
+(defmethod to-prosemirror-schema "code" [node schema]
+  (schema-node
+   schema
+   "code_block"
+   {:params {:data-lang (:lang node)
+             :data-meta (:meta node)}}
+   [(.text schema (:value node))]
+   (or (:active-marks node) [])))
+
+(defmethod to-prosemirror-schema "listItem" [node schema]
+  (schema-node
+   schema
+   "list_item"
+   nil 
+   (map #(to-prosemirror-schema % schema) (:children node))
+   (or (:active-marks node) [])))
+
+(defmethod to-prosemirror-schema "image" [node schema]
+  (schema-node
+   schema
+   "image"
+   {:src (:url node)
+    :alt (:alt node)
+    :title (:title node)}
+   []
+   (or (:active-marks node) [])))
+
+;; TODO: I need to figure out how to flatten this and apply marks to the children correctly
+;; Right now it fails b/c it doesn't pass prosemirror's node content validation
+;; I could cast to a Fragment, but I don't think this works generally...
+(defmethod to-prosemirror-schema "emphasis" [node schema]
+  (let [children (map #(assoc % :active-marks [:em]) (:children node))]
+    (map #(to-prosemirror-schema % schema) children)))
+
+(defmethod to-prosemirror-schema "inlineCode" [node schema]
+  (.text schema (:value node) (clj->js [(.mark schema "code")])))
+
+(defmethod to-prosemirror-schema "text" [node schema]
+  (.text schema (:value node)))
+
+(defmethod to-prosemirror-schema :default [node schema]
+  nil)
+
+(defn long-str [& strings] (clojure.string/join "\n" strings))
+
+(def text
+  (long-str "# Hi"
+            ""
+            "Hi"
+            ""
+            "***"
+            ""
+            "Hi again"
+            ""
+            "> Blockquote"
+            ""
+            "* This"
+            "* Is"
+            "* An unordered list"
+            "1. Ordered list"
+            "2. See?"
+            ""
+            "This has `code`"
+            ""
+            "```python"
+            "def more_code()"
+            "  print 'love it'"
+            "```"
+            ""
+            "(doesn't work) hard··"
+            "break"
+            ""
+            "![Kiwi Image](https://upload.wikimedia.org/wikipedia/commons/d/d3/Kiwi_aka.jpg)"
+            ""
+            "*Emphasis*"
+            ))
+
+
+(def md-ast (kiwi.markdown-processors/get-ast text))
+
+(js/console.log md-ast)
+(def doc 
+  (to-prosemirror-schema md-ast schema))
+
+(def editor-state-2 (reagent/atom (text-editor-state doc)))
+
+(defcard-rg mdast-prosemirror-example
+  [text-editor editor-state-2])
 
 (defcard-doc
   "Other useful links: 

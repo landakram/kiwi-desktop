@@ -243,9 +243,7 @@
     (let [editor-state (:editor-state @state)
           on-editor-state-change (fn [s]
                                    (print "on-editor-state-change")
-                                   (swap! state assoc :editor-state s))]
-      [prose-editor {:editor-state editor-state
-                     :on-editor-state-change on-editor-state-change}])))
+                                   (swap! state assoc :editor-state s))])))
 
 
 (defcard-doc
@@ -444,7 +442,7 @@ view and edit.")
             ""
             "![Kiwi Image](https://upload.wikimedia.org/wikipedia/commons/d/d3/Kiwi_aka.jpg)"
             ""
-            "*Emphasis*"
+            #_"*Emphasis*"
             ))
 
 
